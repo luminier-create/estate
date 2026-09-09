@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:firebase": "node scripts/check-firebase.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.0",

@@ -64,6 +64,7 @@ Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" �
 | `npm run lint` | ESLint |
 | `npm test` | 스코어링 엔진 단위 테스트 (84건) |
 | `npm run test:e2e` | Playwright E2E (전 흐름 + 접근성 감사) |
+| `npm run check:firebase` | Firebase 설정 점검 (값 검증 + 실제 연결 테스트) |
 
 E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저는 Playwright가 설치한 것을
 자동으로 찾으며, 다른 위치의 Chromium을 쓰려면 `PLAYWRIGHT_CHROMIUM_PATH` 로 지정한다.

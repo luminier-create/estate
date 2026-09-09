@@ -209,17 +209,50 @@ transitCount = 거리 10km 미만 ? 0~1 : 1~2    // 거리 해시로 결정적 �
 
 ## 8. 키 발급 체크리스트
 
+### 8.1 Firebase (필수 — 인증·저장소)
+
+| # | 콘솔 경로 | 얻는 값 |
+|---|---|---|
+| 1 | 프로젝트 생성 | 프로젝트 ID |
+| 2 | Authentication → 시작하기 → Sign-in method → **Google** 사용 설정 | — |
+| 3 | Authentication → Settings → 승인된 도메인에 `localhost` 확인 | — |
+| 4 | Firestore Database → 데이터베이스 만들기 → **프로덕션 모드** → `asia-northeast3`(서울) | — |
+| 5 | 프로젝트 설정 → 내 앱 → 웹 앱 추가(`</>`) → SDK 설정 및 구성 | `NEXT_PUBLIC_FIREBASE_*` 6개 |
+| 6 | 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON) | `FIREBASE_ADMIN_*` 3개 |
+
+서비스 계정 JSON 에서 옮겨 담을 값:
+
+| JSON 필드 | 환경변수 |
+|---|---|
+| `project_id` | `FIREBASE_ADMIN_PROJECT_ID` |
+| `client_email` | `FIREBASE_ADMIN_CLIENT_EMAIL` |
+| `private_key` | `FIREBASE_ADMIN_PRIVATE_KEY` (개행을 `\n` 으로 이스케이프해 한 줄로) |
+
+**설정 후 반드시 검증**:
+
+```bash
+npm run check:firebase
 ```
-[ ] 1. Firebase 프로젝트 생성 → Authentication에서 Google 제공자 사용 설정
-[ ] 2. Firebase 웹 앱 등록 → firebaseConfig 6개 값 확보
-[ ] 3. Firebase 서비스 계정 키 생성(JSON) → Admin 3개 값 확보
-[ ] 4. Firestore 생성 (asia-northeast3 서울 리전) → 프로덕션 모드
-[ ] 5. developers.kakao.com 앱 생성 → REST API 키 + JavaScript 키
-[ ] 6. 카카오 앱 설정 → 플랫폼 → Web → 사이트 도메인 등록 (localhost 포함)
-[ ] 7. data.go.kr 회원가입 → 아파트 매매 실거래가 상세 활용신청 → 인증키
-[ ] 8. lab.odsay.com 가입 → API 키 발급 → 도메인/IP 등록
-[ ] 9. .env.local 에 위 값 기입 (.env.example 참고)
+
+값 누락, `private_key` 형식 오류, 웹/Admin 프로젝트 ID 불일치를 잡아내고,
+Admin SDK 초기화 → Firestore 쓰기·읽기·삭제 → Authentication 접근까지 실제로 시험한다.
+
+> 리전은 한 번 정하면 바꿀 수 없다. 국내 서비스이므로 `asia-northeast3` 를 쓴다.
+> Firestore 를 만들지 않은 채로 두면 연결 테스트가 `NOT_FOUND` 로 실패한다.
+
+### 8.2 나머지 API (선택 — 미설정 시 시드 데이터로 동작)
+
 ```
+[ ] developers.kakao.com 앱 생성 → 카카오맵 API 활성화
+[ ] 앱 키 → REST API 키 + JavaScript 키
+[ ] 플랫폼 → Web → 사이트 도메인 등록 (http://localhost:3000, http://localhost:3100)
+[ ] data.go.kr 가입 → 아파트 매매 실거래가 상세 활용신청(자동승인) → 인증키
+[ ] lab.odsay.com 가입 → API 키 발급 → 도메인/IP 등록
+[ ] .env.local 에 값 기입 (.env.example 참고)
+```
+
+주: 카카오맵 API 는 개발자 계정 기준 **첫 번째로 활성화한 앱에만 무료 쿼터**가 제공된다.
+두 번째 앱부터 또는 한도 초과 시 비즈월렛 연결 후 사용량 기반 과금이다. [구버전-검증필요]
 
 **출처**
 - [국토교통부_아파트 매매 실거래가 상세 자료 | 공공데이터포털](https://www.data.go.kr/data/15126468/openapi.do)
