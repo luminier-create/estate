@@ -37,6 +37,12 @@ async function audit(page: Page, label: string) {
 async function signIn(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: /데모 모드로 둘러보기/ }).click()
+
+  // 데모 로그인은 세션 쿠키를 받은 뒤에 이동한다. 이 이동을 기다리지 않고 다음
+  // 요청을 보내면 쿠키 없이 랜딩에 머물러 아래 온보딩 분기를 건너뛰게 되고,
+  // 이후 보호된 경로가 전부 온보딩으로 튕긴다.
+  await page.waitForURL(/\/onboarding|\/dashboard/)
+
   await page.goto('/properties/new')
   if (page.url().includes('/onboarding')) {
     await page.getByLabel('목표 매입 금액').fill('180000')
@@ -46,7 +52,11 @@ async function signIn(page: Page) {
     await page.getByRole('button', { name: '다음' }).click()
     await page.getByRole('button', { name: '등록하고 시작하기' }).click()
     await page.waitForURL(/\/dashboard/)
+    await page.goto('/properties/new')
   }
+
+  // 여기까지 왔으면 보호된 경로에 실제로 진입한 상태여야 한다
+  await expect(page.getByLabel('주소 검색')).toBeVisible()
 }
 
 test('랜딩 화면', async ({ page }) => {

@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // 최초 라우트 컴파일이 테스트 타임아웃을 잡아먹지 않도록 미리 예열한다
+  globalSetup: './tests/e2e/global-setup.ts',
   timeout: 150_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
