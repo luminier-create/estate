@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env*.local
+*.log
+npm-debug.log*
+.DS_Store
+coverage/
+next-env.d.ts
+*.tsbuildinfo
+.firebase/
+firebase-debug.log
+test-results/
+playwright-report/
