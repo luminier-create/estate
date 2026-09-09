@@ -17,7 +17,9 @@ import {
 } from '@/lib/repo'
 import type { StoredProperty } from '@/lib/repo/types'
 import { analyzeProperty } from '@/lib/analyze'
-import { geoProvider } from '@/lib/providers'
+import { geoProvider, providerStatus } from '@/lib/providers'
+import { cachedCall } from '@/lib/cache'
+import { CACHE_POLICY, geocodeKey } from '@/lib/cache-keys'
 import { pyeongToM2 } from '@/lib/scoring/normalize'
 import { AXIS_CODES, RISK_CODES } from '@/lib/scoring/types'
 
@@ -121,9 +123,14 @@ export async function savePropertyAction(input: PropertyFormInput) {
   let legalCode = ''
   let lawdCd = ''
 
-  const geocoded = await geoProvider()
-    .geocode(data.address || data.name)
-    .catch(() => null)
+  // 주소→좌표는 변하지 않으므로 무기한 캐시한다
+  const query = data.address || data.name
+  const geocoded = await cachedCall(
+    CACHE_POLICY.geo,
+    geocodeKey(query),
+    providerStatus.geo === 'kakao' ? 'kakao' : null,
+    () => geoProvider().geocode(query),
+  ).catch(() => null)
 
   if (geocoded) {
     lat ??= geocoded.lat

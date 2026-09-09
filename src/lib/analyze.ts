@@ -26,8 +26,19 @@ import {
   odsayStops,
   transitProvider,
   providerStatus,
+  type CategoryCode,
+  type TransitMode,
 } from './providers'
 import { recentMonths } from './providers/molit'
+import { cachedCall } from './cache'
+import {
+  CACHE_POLICY,
+  marketKey,
+  marketTtl,
+  poiKey,
+  routeKey,
+  type QuotaProvider,
+} from './cache-keys'
 import type { StoredProfile, StoredProperty } from './repo/types'
 
 const POI_RADIUS = {
@@ -52,6 +63,20 @@ async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
   } catch {
     return null
   }
+}
+
+/**
+ * 모의 구현에는 쿼터를 소모시키지 않는다 — 외부 호출이 없기 때문이다.
+ * 실 Provider 일 때만 일일 상한을 적용한다.
+ */
+const QUOTA_OF: {
+  geo: QuotaProvider | null
+  market: QuotaProvider | null
+  transit: QuotaProvider | null
+} = {
+  geo: providerStatus.geo === 'kakao' ? 'kakao' : null,
+  market: providerStatus.market === 'molit' ? 'molit' : null,
+  transit: providerStatus.transit === 'odsay' ? 'odsay' : null,
 }
 
 export function toPropertyInput(p: StoredProperty): PropertyInput {
@@ -146,6 +171,16 @@ export async function collectObservations(
   const stops = odsayStops()
   const at = { lat: property.lat, lng: property.lng }
 
+  const poi = (category: CategoryCode, radiusM: number) =>
+    safe(() =>
+      cachedCall(
+        CACHE_POLICY.poi,
+        poiKey(category, at.lat, at.lng, radiusM),
+        QUOTA_OF.geo,
+        () => geo.nearbyByCategory(category, at, radiusM),
+      ),
+    )
+
   const [
     subwayStations,
     busStops,
@@ -157,28 +192,44 @@ export async function collectObservations(
     avoidedFacilities,
     majorRoads,
   ] = await Promise.all([
-    safe(() => geo.nearbyByCategory('SUBWAY', at, POI_RADIUS.SUBWAY)),
+    poi('SUBWAY', POI_RADIUS.SUBWAY),
     safe(() =>
-      stops
-        ? stops.nearbyStops(at, POI_RADIUS.BUS_STOP)
-        : geo.nearbyByCategory('BUS_STOP', at, POI_RADIUS.BUS_STOP),
+      cachedCall(
+        CACHE_POLICY.poi,
+        poiKey('BUS_STOP', at.lat, at.lng, POI_RADIUS.BUS_STOP),
+        stops ? QUOTA_OF.transit : QUOTA_OF.geo,
+        () =>
+          stops
+            ? stops.nearbyStops(at, POI_RADIUS.BUS_STOP)
+            : geo.nearbyByCategory('BUS_STOP', at, POI_RADIUS.BUS_STOP),
+      ),
     ),
-    safe(() => geo.nearbyByCategory('ELEMENTARY', at, POI_RADIUS.SCHOOL)),
-    safe(() => geo.nearbyByCategory('MIDDLE', at, POI_RADIUS.SCHOOL)),
-    safe(() => geo.nearbyByCategory('HIGH', at, POI_RADIUS.SCHOOL)),
-    safe(() => geo.nearbyByCategory('MART', at, POI_RADIUS.MART)),
-    safe(() => geo.nearbyByCategory('NIGHTLIFE', at, POI_RADIUS.NIGHTLIFE)),
-    safe(() => geo.nearbyByCategory('AVOIDED', at, POI_RADIUS.AVOIDED)),
-    safe(() => geo.nearbyByCategory('MAJOR_ROAD', at, POI_RADIUS.ROAD)),
+    poi('ELEMENTARY', POI_RADIUS.SCHOOL),
+    poi('MIDDLE', POI_RADIUS.SCHOOL),
+    poi('HIGH', POI_RADIUS.SCHOOL),
+    poi('MART', POI_RADIUS.MART),
+    poi('NIGHTLIFE', POI_RADIUS.NIGHTLIFE),
+    poi('AVOIDED', POI_RADIUS.AVOIDED),
+    poi('MAJOR_ROAD', POI_RADIUS.ROAD),
   ])
 
   // 경로 조회 — 사무실 3종 + 자주 가는 장소 2종/개
+  const route = (to: { lat: number; lng: number }, mode: TransitMode) =>
+    safe(() =>
+      cachedCall(
+        CACHE_POLICY.route,
+        routeKey(at, to, mode),
+        QUOTA_OF.transit,
+        () => transit.route(at, to, mode),
+      ),
+    )
+
   const office = user.office
   const [officeRoute, officeSubwayRoute, officeBusRoute] = office
     ? await Promise.all([
-        safe(() => transit.route(at, office, 'ALL')),
-        safe(() => transit.route(at, office, 'SUBWAY')),
-        safe(() => transit.route(at, office, 'BUS')),
+        route(office, 'ALL'),
+        route(office, 'SUBWAY'),
+        route(office, 'BUS'),
       ])
     : [null, null, null]
 
@@ -187,8 +238,8 @@ export async function collectObservations(
   await Promise.all(
     user.frequentPlaces.map(async (place) => {
       const [sub, bus] = await Promise.all([
-        safe(() => transit.route(at, place, 'SUBWAY')),
-        safe(() => transit.route(at, place, 'BUS')),
+        route(place, 'SUBWAY'),
+        route(place, 'BUS'),
       ])
       if (sub) placeSubwayRoutes[place.id] = sub
       if (bus) placeBusRoutes[place.id] = bus
@@ -198,7 +249,18 @@ export async function collectObservations(
   // 실거래 — 최근 6개월 + 모멘텀 산출을 위한 직전 12개월
   const months = recentMonths(MARKET_WINDOW_MONTHS + 18)
   const monthlyTrades = await Promise.all(
-    months.map((m) => safe(() => market.trades(property.lawdCd, m))),
+    months.map((m) =>
+      safe(() =>
+        cachedCall(
+          CACHE_POLICY.market,
+          marketKey(property.lawdCd, m),
+          QUOTA_OF.market,
+          () => market.trades(property.lawdCd, m),
+          // 최근 월은 신고가 계속 들어오므로 짧게, 확정된 과거 월은 무기한
+          marketTtl(m),
+        ),
+      ),
+    ),
   )
   const anyMarketSuccess = monthlyTrades.some((t) => t !== null)
 

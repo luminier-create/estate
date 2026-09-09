@@ -4,6 +4,8 @@ import { OnboardingForm } from '@/components/onboarding/OnboardingForm'
 import { requireUserOrRedirect } from '@/lib/firebase/session'
 import { getProfile } from '@/lib/repo'
 import { providerStatus } from '@/lib/providers'
+import { remainingQuota } from '@/lib/cache'
+import { quotaLimit, type QuotaProvider } from '@/lib/cache-keys'
 import { getPreset } from '@/lib/scoring/presets'
 import { ALGORITHM_VERSION } from '@/lib/scoring/types'
 
@@ -18,6 +20,23 @@ export default async function SettingsPage() {
   const user = await requireUserOrRedirect()
   const profile = await getProfile(user.uid)
   if (!profile) redirect('/')
+
+  // 실 Provider 로 동작 중인 것만 잔여 쿼터를 보여준다
+  const liveProviders = (
+    [
+      ['geo', 'kakao'],
+      ['market', 'molit'],
+      ['transit', 'odsay'],
+    ] as const
+  ).filter(([key, name]) => providerStatus[key] === name)
+
+  const quotas = await Promise.all(
+    liveProviders.map(async ([, name]) => ({
+      name: name as QuotaProvider,
+      remaining: await remainingQuota(name as QuotaProvider),
+      limit: quotaLimit(name as QuotaProvider),
+    })),
+  )
 
   return (
     <div className="space-y-5">
@@ -60,6 +79,27 @@ export default async function SettingsPage() {
             </li>
           ))}
         </ul>
+
+        {quotas.length > 0 && (
+          <div className="mt-5 border-t border-[var(--color-border)] pt-4">
+            <h3 className="text-sm font-semibold">오늘 남은 조회 한도</h3>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              외부 API 는 무료 티어라 일일 호출 수가 제한됩니다. 한도에 도달하면
+              해당 항목만 결측 처리되고 나머지 축으로 점수가 산출됩니다. 동일한
+              조회는 캐시되므로 같은 단지를 다시 분석해도 한도를 쓰지 않습니다.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {quotas.map((q) => (
+                <li key={q.name} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{q.name}</span>
+                  <Badge tone={q.remaining === 0 ? 'negative' : q.remaining < q.limit * 0.2 ? 'warn' : 'neutral'}>
+                    {q.remaining.toLocaleString('ko-KR')} / {q.limit.toLocaleString('ko-KR')}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Card>
 
       <Disclaimer />
