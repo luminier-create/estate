@@ -466,3 +466,61 @@ describe('RISK', () => {
     expect(risks.filter((r) => r.code === 'PARKING_SHORTAGE')).toHaveLength(1)
   })
 })
+
+describe('손상된 입력에 대한 내성', () => {
+  it('알 수 없는 호재 유형·단계는 크래시가 아니라 무시', () => {
+    const r = scoreDevelopment(
+      makeInput({
+        property: makeProperty({
+          developments: [
+            {
+              title: '알 수 없는 것',
+              type: 'UNKNOWN_TYPE' as never,
+              stage: 'CONFIRMED',
+              announcedAt: '2026-01-01',
+            },
+            {
+              title: '단계가 이상함',
+              type: 'GTX_NEW_STATION',
+              stage: 'BOGUS' as never,
+              announcedAt: '2026-01-01',
+            },
+          ],
+        }),
+      }),
+    )
+    // 유효한 호재가 하나도 남지 않으므로 중립 점수
+    expect(r.score).not.toBeNull()
+    expect(Number.isFinite(r.score!)).toBe(true)
+  })
+
+  it('알 수 없는 리스크 코드는 크래시가 아니라 무시', () => {
+    const { risks, penalty } = evaluateRisks(
+      makeInput({ property: makeProperty({ userRisks: ['MADE_UP' as never] }) }),
+    )
+    expect(risks.every((x) => x.code !== ('MADE_UP' as never))).toBe(true)
+    expect(Number.isFinite(penalty)).toBe(true)
+  })
+
+  it.each([
+    ['0', 0],
+    ['음수', -84],
+  ])('전용면적이 %s 이면 VALUE 는 만점이 아니라 결측', (_label, exclusiveM2) => {
+    const r = scoreValue(
+      makeInput({
+        property: makeProperty({ exclusiveM2, priceManwon: 500_000 }),
+        observations: makeObservations({
+          comparableTrades: Array.from({ length: 8 }, (_, i) => ({
+            aptName: '비교단지',
+            exclusiveM2: 84,
+            amountManwon: 150_000 + i * 1000,
+            dealDate: '2026-01-01',
+            floor: 10,
+            buildYear: 2010,
+          })),
+        }),
+      }),
+    )
+    expect(r.score).toBeNull()
+  })
+})

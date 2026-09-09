@@ -90,13 +90,15 @@ export function computeScore(input: ScoringInput): ScoreResult {
       : 0
 
   const { risks, penalty } = evaluateRisks(input)
-  const totalScore = Math.min(100, Math.max(0, baseScore - penalty))
+  // 등급은 반올림 후 값으로 정한다. 반올림 전 값을 쓰면 84.96 과 85.04 가
+  // 화면에 똑같이 "85점"으로 뜨면서 A 와 S 로 갈린다.
+  const totalScore = round1(Math.min(100, Math.max(0, baseScore - penalty)))
 
   const declaredWeight = axes.reduce((s, a) => s + a.weight, 0)
   const confidence = declaredWeight > 0 ? totalWeight / declaredWeight : 0
 
   return {
-    totalScore: round1(totalScore),
+    totalScore,
     grade: toGrade(totalScore),
     baseScore: round1(baseScore),
     riskPenalty: penalty,
@@ -110,13 +112,29 @@ export function computeScore(input: ScoringInput): ScoreResult {
   }
 }
 
+/**
+ * 총점 내림차순 비교자. 동점이면 신뢰도가 높은 쪽을 앞에 둔다.
+ *
+ * 순위를 매기는 곳은 전부 이걸 써야 한다. 화면마다 `totalScore` 만으로
+ * 정렬하면 같은 점수의 두 단지 순서가 화면별로 달라진다.
+ */
+export function compareByScore(
+  a: { totalScore: number; confidence: number } | null,
+  b: { totalScore: number; confidence: number } | null,
+): number {
+  // 미분석 단지는 항상 뒤로
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+
+  const diff = b.totalScore - a.totalScore
+  if (Math.abs(diff) > 0.05) return diff
+  return b.confidence - a.confidence
+}
+
 /** 총점 내림차순 정렬. 동점이면 신뢰도가 높은 쪽을 앞에 둔다. */
 export function rankResults<T extends { score: ScoreResult }>(items: T[]): T[] {
-  return [...items].sort((a, b) => {
-    const diff = b.score.totalScore - a.score.totalScore
-    if (Math.abs(diff) > 0.05) return diff
-    return b.score.confidence - a.score.confidence
-  })
+  return [...items].sort((a, b) => compareByScore(a.score, b.score))
 }
 
 /** 축별 기여도 (총점에 몇 점 기여했는지). 상세 화면의 기여도 바 차트용. */
@@ -174,10 +192,10 @@ export function recomputeWithWeights(
         totalWeight
       : 0
   const declared = axes.reduce((s, a) => s + weightOf(weights, a.axis), 0)
-  const totalScore = Math.min(100, Math.max(0, baseScore - riskPenalty))
+  const totalScore = round1(Math.min(100, Math.max(0, baseScore - riskPenalty)))
 
   return {
-    totalScore: round1(totalScore),
+    totalScore,
     grade: toGrade(totalScore),
     baseScore: round1(baseScore),
     confidence: declared > 0 ? Math.round((totalWeight / declared) * 100) / 100 : 0,

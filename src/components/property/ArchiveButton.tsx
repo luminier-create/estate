@@ -14,17 +14,30 @@ export function ArchiveButton({
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handle() {
     setBusy(true)
-    await setPropertyStatusAction(propertyId, archived ? 'ACTIVE' : 'ARCHIVED')
-    router.refresh()
+    setError(null)
+    const res = await setPropertyStatusAction(
+      propertyId,
+      archived ? 'ACTIVE' : 'ARCHIVED',
+    )
+    if (!res.ok) setError(res.error)
+    else router.refresh()
     setBusy(false)
   }
 
   return (
-    <Button variant="secondary" onClick={handle} disabled={busy}>
-      {busy ? '처리 중…' : archived ? '후보로 되돌리기' : '보류함으로 이동'}
-    </Button>
+    <div>
+      <Button variant="secondary" onClick={handle} disabled={busy}>
+        {busy ? '처리 중…' : archived ? '후보로 되돌리기' : '보류함으로 이동'}
+      </Button>
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-[var(--color-negative)]">
+          {error}
+        </p>
+      ) : null}
+    </div>
   )
 }

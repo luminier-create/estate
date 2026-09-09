@@ -202,6 +202,11 @@ export async function setPropertyStatusAction(
   status: 'ACTIVE' | 'ARCHIVED',
 ) {
   const user = await requireUser()
+  // 존재 확인 없이 merge 하면 status 만 있는 유령 문서가 생기고, 보류함이
+  // name 이 undefined 인 카드를 렌더한다
+  if (!(await getProperty(user.uid, id))) {
+    return { ok: false as const, error: '단지를 찾을 수 없습니다.' }
+  }
   await updateProperty(user.uid, id, { status })
   revalidatePath('/dashboard')
   revalidatePath('/compare')

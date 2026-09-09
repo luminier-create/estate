@@ -8,7 +8,7 @@ import {
   weakestAxes,
 } from '@/lib/scoring/aggregate'
 import { getPreset, normalizeWeights } from '@/lib/scoring/presets'
-import { AXIS_CODES } from '@/lib/scoring/types'
+import { AXIS_CODES, type AxisResult } from '@/lib/scoring/types'
 import { makeInput, makeObservations, makeProperty, makeUser } from '../../fixtures/builders'
 
 describe('등급 매핑', () => {
@@ -250,5 +250,29 @@ describe('계산 불능 값의 결측 강등', () => {
     expect(Number.isFinite(broken.totalScore)).toBe(true)
     expect(broken.totalScore).toBe(0)
     expect(broken.confidence).toBe(0)
+  })
+})
+
+describe('등급과 표시 점수의 일치', () => {
+  it('반올림된 점수가 같으면 등급도 같다', () => {
+    // 84.96 과 85.04 는 화면에 둘 다 "85점"으로 뜬다. 등급이 갈리면 안 된다.
+    const axes = (score: number): AxisResult[] => [
+      {
+        axis: 'COMMUTE',
+        score,
+        weight: 100,
+        raw: {},
+        reason: '',
+        details: [],
+        sources: [],
+        confidence: 'high',
+      },
+    ]
+    const low = recomputeWithWeights(axes(84.96), { COMMUTE: 100 }, 0)
+    const high = recomputeWithWeights(axes(85.04), { COMMUTE: 100 }, 0)
+
+    expect(low.totalScore).toBe(high.totalScore)
+    expect(low.grade).toBe(high.grade)
+    expect(low.grade).toBe('S')
   })
 })

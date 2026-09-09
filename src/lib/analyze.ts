@@ -9,7 +9,7 @@ import 'server-only'
  */
 import { computeScore } from './scoring/aggregate'
 import { m2ToPyeong, median, quantile, removeOutliers } from './scoring/normalize'
-import { getPreset, normalizeWeights } from './scoring/presets'
+import { getPreset, normalizeWeights, safePresetId } from './scoring/presets'
 import { collectLandmarks } from './scoring/landmarks'
 import type {
   Landmark,
@@ -287,10 +287,12 @@ export async function collectObservations(
   const premiumPricePerPyeong =
     allUnitPrices.length >= 10 ? quantile(removeOutliers(allUnitPrices), 0.75) : null
 
-  // 해당 단지 최근 12개월 거래건수
+  // 해당 단지 최근 12개월 거래건수.
+  // 조회에 성공했다면 0 건도 관측값이다 — 유동성 최악이라는 뜻이므로 결측으로
+  // 빼면 INVESTMENT 점수가 오히려 올라간다. `|| null` 이 0 을 결측으로 만들고
+  // 있었다.
   const tradeCount12m = anyMarketSuccess
-    ? recent12.filter((t) => t.aptName && t.aptName === property.name).length ||
-      null
+    ? recent12.filter((t) => t.aptName && t.aptName === property.name).length
     : null
 
   // 건축년도 — 실거래 상세에서 동일 단지명 매칭
@@ -325,7 +327,10 @@ export async function collectObservations(
     // 입주예정 물량은 공개 API 로 확보되지 않아 MVP 에서는 결측 처리한다
     upcomingSupply: null,
     existingHouseholds: null,
-    regionAvgFeePerM2: 2400,
+    // 시·군·구 평균 관리비는 공동주택관리정보시스템 연동 전이라 확보되지 않았다.
+    // 전국 단일 상수로 비교하면서 "지역 평균 대비 +N%" 라고 출처까지 달아 표시하면
+    // 추정이 실측처럼 읽힌다. 값이 없으면 결측으로 두는 편이 맞다.
+    regionAvgFeePerM2: null,
     approachSlope: null,
   }
 }
@@ -347,7 +352,7 @@ export async function analyzeProperty(
   const user = toUserContext(profile)
   const observations = await collectObservations(property, user)
 
-  const activePreset = presetId ?? profile.weights.presetId
+  const activePreset = safePresetId(presetId ?? profile.weights.presetId)
   const weights =
     activePreset === 'custom' && profile.weights.custom
       ? normalizeWeights(profile.weights.custom)

@@ -39,6 +39,11 @@ export function scoreValue(ctx: AxisContext): AxisResult {
   }
 
   const pyeong = m2ToPyeong(ctx.property.exclusiveM2)
+  if (!(pyeong > 0)) {
+    // 음수 면적은 비율을 음수로 만들고, piecewise 하한 clamp 를 타 만점이 된다
+    // ("평당 -19,677만원 — 358.5% 저평가"). 0 은 Infinity 다. 둘 다 결측이 맞다.
+    return missing('VALUE', weight, '전용면적이 올바르지 않아 평단가를 산출할 수 없습니다.')
+  }
   const userPerPyeong = ctx.property.priceManwon / pyeong
 
   const rawUnitPrices = trades.map((t) => t.amountManwon / m2ToPyeong(t.exclusiveM2))

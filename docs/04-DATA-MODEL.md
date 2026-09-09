@@ -212,10 +212,12 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow write: if false;            // 쓰기는 전부 서버(Admin SDK)
 
       match /properties/{propertyId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
       match /analyses/{analysisId} {
         allow read: if isOwner(uid);
@@ -234,9 +236,26 @@ service cloud.firestore {
     match /cache_route/{doc}  { allow read, write: if false; }
     match /cache_market/{doc} { allow read, write: if false; }
     match /quota/{doc}        { allow read, write: if false; }
+
+    // 명시되지 않은 경로는 모두 거부
+    match /{document=**} { allow read, write: if false; }
   }
 }
 ```
+
+### 왜 소유자에게도 쓰기를 주지 않는가
+
+브라우저 코드는 Firebase Auth 만 쓰고 Firestore 에는 직접 접근하지 않는다.
+모든 저장은 서버 액션이 Zod 로 검증한 뒤 Admin SDK 로 수행하며,
+Admin SDK 는 이 규칙을 우회하므로 앱 동작에는 영향이 없다.
+
+소유자 쓰기를 열어두면 그 검증 전체가 우회 가능한 경계 밖에 놓인다.
+클라이언트 설정(`NEXT_PUBLIC_FIREBASE_*`)은 공개되어 있고 사용자는 ID 토큰을
+갖고 있으므로 브라우저 SDK 로 자기 문서를 직접 쓸 수 있기 때문이다. 자기
+데이터라 타인 침해는 아니지만, `frequentPlaces` 를 수천 개로 써넣어 외부 API
+호출을 폭증시키거나(무료 티어 소진), 면적·enum 코드를 손상시켜 스코어링을
+깨뜨리는 것이 가능했다. "점수는 서버에서만 산출한다"는 원칙은 입력 문서가
+무검증으로 열려 있으면 성립하지 않는다.
 
 ---
 

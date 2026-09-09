@@ -1,7 +1,19 @@
 rules_version = '2';
 
 // 설계 근거: docs/04-DATA-MODEL.md §7
-// 원칙 — 사용자는 자기 문서만 읽고 쓴다. 분석 결과와 캐시는 서버(Admin SDK)만 기록한다.
+//
+// 원칙 — 쓰기는 전부 서버(Admin SDK)가 한다. 클라이언트는 자기 문서만 읽는다.
+//
+// 이 앱의 브라우저 코드는 Firebase Auth 만 쓰고 Firestore 에는 직접 접근하지
+// 않는다. 모든 저장은 서버 액션이 Zod 로 검증한 뒤 Admin SDK 로 수행한다
+// (Admin SDK 는 이 규칙을 우회하므로 앱 동작에는 영향이 없다).
+//
+// 예전에는 `users/{uid}` 와 그 하위 properties 에 소유자 무제한 쓰기를 허용했다.
+// 클라이언트 설정(NEXT_PUBLIC_FIREBASE_*)은 공개되어 있고 사용자는 ID 토큰을
+// 갖고 있으므로, 브라우저 SDK 로 직접 문서를 쓸 수 있었다 — 서버 액션의 Zod
+// 검증 전체가 우회 가능한 경계 밖에 있었다는 뜻이다. 구체적으로
+// frequentPlaces 를 수천 개로 써넣어 외부 API 호출을 폭증시키거나,
+// 면적·enum 코드를 손상시켜 스코어링을 망가뜨릴 수 있었다.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -10,10 +22,12 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow write: if false;
 
       match /properties/{propertyId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
 
       match /analyses/{analysisId} {

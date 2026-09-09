@@ -57,8 +57,13 @@ export function scoreInvestment(ctx: AxisContext): AxisResult {
 
   // (b) 상대 저평가 (생활권 상위 25% 대비 갭)
   let gapScore: number | null = null
-  if (obs.premiumPricePerPyeong != null && obs.premiumPricePerPyeong > 0) {
-    const own = ctx.property.priceManwon / m2ToPyeong(ctx.property.exclusiveM2)
+  const ownPyeong = m2ToPyeong(ctx.property.exclusiveM2)
+  if (
+    obs.premiumPricePerPyeong != null &&
+    obs.premiumPricePerPyeong > 0 &&
+    ownPyeong > 0
+  ) {
+    const own = ctx.property.priceManwon / ownPyeong
     const gap = 1 - own / obs.premiumPricePerPyeong
     gapScore = piecewise(gap, GAP_CURVE)
     details.push(

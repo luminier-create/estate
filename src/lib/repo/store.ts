@@ -67,6 +67,30 @@ class FirestoreStore implements DocStore {
   }
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+/**
+ * Firestore 의 `set(merge: true)` 와 같은 병합 규칙 — 중첩 맵은 병합하고
+ * 배열·원시값은 교체한다.
+ *
+ * 얕게 덮어쓰면 데모(메모리)와 프로덕션(Firestore)에서 동작이 갈린다.
+ * 예를 들어 `weights: {presetId}` 만 갱신할 때 기존 `custom` 이 남느냐 사라지느냐가
+ * 저장소별로 달라진다 — E2E 는 데모로 돌아가므로 이런 차이는 잡히지 않는다.
+ */
+function deepMerge(
+  prev: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...prev }
+  for (const [k, v] of Object.entries(patch)) {
+    const before = out[k]
+    out[k] = isPlainObject(before) && isPlainObject(v) ? deepMerge(before, v) : v
+  }
+  return out
+}
+
 /** 프로세스 전역 인메모리 저장소. HMR 로 초기화되지 않도록 globalThis 에 둔다. */
 const memory: Map<string, unknown> =
   (globalThis as { __homefitStore?: Map<string, unknown> }).__homefitStore ??
@@ -84,7 +108,7 @@ class MemoryStore implements DocStore {
   }
   async update<T>(path: string, patch: Partial<T>): Promise<void> {
     const prev = (memory.get(path) as Record<string, unknown>) ?? {}
-    memory.set(path, { ...prev, ...structuredClone(patch) })
+    memory.set(path, deepMerge(prev, structuredClone(patch) as Record<string, unknown>))
   }
   async delete(path: string): Promise<void> {
     memory.delete(path)

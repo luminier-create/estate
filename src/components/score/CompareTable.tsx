@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Badge, Button, Card } from '@/components/ui'
 import { ScoreBadge } from './ScoreBadge'
-import { recomputeWithWeights } from '@/lib/scoring/aggregate'
+import { recomputeWithWeights, compareByScore } from '@/lib/scoring/aggregate'
 import { formatManwon, m2ToPyeong } from '@/lib/scoring/normalize'
 import { PRESETS, normalizeWeights } from '@/lib/scoring/presets'
 import { saveWeightsAction } from '@/app/(app)/actions'
@@ -48,7 +48,7 @@ export function CompareTable({
         row,
         result: recomputeWithWeights(row.axes, weights, row.riskPenalty),
       }))
-      .sort((a, b) => b.result.totalScore - a.result.totalScore)
+      .sort((a, b) => compareByScore(a.result, b.result))
   }, [rows, weights])
 
   const weightSum = AXIS_CODES.reduce((s, c) => s + weights[c], 0)

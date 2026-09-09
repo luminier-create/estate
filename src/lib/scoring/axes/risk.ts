@@ -42,8 +42,10 @@ export function evaluateRisks(ctx: ScoringInput): {
 
   const add = (code: RiskCode, origin: 'auto' | 'user', reason: string) => {
     if (seen.has(code)) return
-    seen.add(code)
     const spec = RISK_SPEC[code]
+    // 저장된 문서의 알 수 없는 코드로 스코어링 전체가 던지지 않게 한다
+    if (!spec) return
+    seen.add(code)
     risks.push({ code, label: spec.label, penalty: spec.penalty, origin, reason })
   }
 

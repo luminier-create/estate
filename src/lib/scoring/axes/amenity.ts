@@ -87,6 +87,10 @@ export function scoreAmenity(ctx: AxisContext): AxisResult {
     details.push(
       `㎡당 관리비 ${monthlyFeePerM2.toLocaleString('ko-KR')}원 — 지역 평균 ${regionAvg.toLocaleString('ko-KR')}원 대비 ${pct >= 0 ? '+' : ''}${pct}%`,
     )
+  } else if (monthlyFeePerM2 != null) {
+    details.push(
+      `㎡당 관리비 ${monthlyFeePerM2.toLocaleString('ko-KR')}원 입력됨 — 비교할 지역 평균이 없어 점수에는 반영하지 않았습니다`,
+    )
   } else {
     details.push('관리비 정보 없음 — 커뮤니티 시설만으로 평가')
   }
@@ -129,7 +133,12 @@ export function scoreAmenity(ctx: AxisContext): AxisResult {
     },
     reason,
     details,
-    sources: [{ label: '공동주택관리정보시스템 / 사용자 입력', asOf: '' }],
+    sources: [
+      { label: '사용자 입력', asOf: '' },
+      ...(regionAvg != null
+        ? [{ label: '공동주택관리정보시스템', asOf: '' }]
+        : []),
+    ],
     confidence: facilityScore != null && feeScore != null ? 'high' : 'medium',
   })
 }

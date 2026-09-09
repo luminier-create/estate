@@ -12,6 +12,7 @@ import {
   listProperties,
   profileHash,
 } from '@/lib/repo'
+import { compareByScore } from '@/lib/scoring/aggregate'
 import { getPreset } from '@/lib/scoring/presets'
 import { formatManwon } from '@/lib/scoring/normalize'
 
@@ -38,11 +39,9 @@ export default async function DashboardPage() {
     })),
   )
 
-  const ranked = [...rows].sort((a, b) => {
-    const sa = a.analysis?.totalScore ?? -1
-    const sb = b.analysis?.totalScore ?? -1
-    return sb - sa
-  })
+  const ranked = [...rows].sort((a, b) =>
+    compareByScore(a.analysis, b.analysis),
+  )
 
   const unanalyzed = ranked.filter((r) => r.analysis === null).length
 

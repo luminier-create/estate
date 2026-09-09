@@ -56,6 +56,24 @@ export function getPreset(id: string): Preset {
   return PRESETS.find((p) => p.id === id) ?? PRESETS[0]!
 }
 
+/** 커스텀 가중치를 쓰는 프로필의 프리셋 id */
+export const CUSTOM_PRESET_ID = 'custom'
+
+export function isKnownPresetId(id: string): boolean {
+  return id === CUSTOM_PRESET_ID || PRESETS.some((p) => p.id === id)
+}
+
+/**
+ * 알 수 없는 값은 기본 프리셋으로 되돌린다.
+ *
+ * getPreset 은 모르는 id 에 조용히 balanced 를 쓰지만, 원문 id 는 그대로
+ * 분석 문서 ID 에 들어간다 — 임의 문자열로 문서를 무한 생성할 수 있고
+ * 슬래시가 들어가면 경로 깊이까지 바뀐다.
+ */
+export function safePresetId(id: string | undefined): string {
+  return id && isKnownPresetId(id) ? id : PRESETS[0]!.id
+}
+
 /**
  * 사용자 커스텀 가중치를 합 100으로 재정규화한다.
  * 슬라이더 조작 결과가 100이 아니어도 상대 비율만 유지하면 되므로 안전하다.

@@ -24,9 +24,8 @@ export async function POST(req: Request) {
     const result = await runAnalysis(parsed.data.propertyId, parsed.data.presetId)
     return NextResponse.json(result)
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : '분석에 실패했습니다.' },
-      { status: 500 },
-    )
+    // 내부 메시지를 그대로 내보내면 인증 상태·저장소 오류가 클라이언트로 샌다
+    console.error('[api/analyze]', e)
+    return NextResponse.json({ error: '분석에 실패했습니다.' }, { status: 500 })
   }
 }

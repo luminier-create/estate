@@ -49,6 +49,18 @@ export const STAGE_LABEL: Record<DevelopmentStage, string> = {
 /** 호재가 하나도 없을 때의 중립 점수 */
 const NEUTRAL_SCORE = 40
 
+/**
+ * 정의되지 않은 유형·단계를 걸러낸다.
+ *
+ * 저장된 문서에 알 수 없는 코드가 하나만 있어도 조회 결과가 undefined 가 되고
+ * `.radiusM` 접근에서 스코어링 전체가 던진다. 축 하나가 결측되는 게 아니라
+ * 그 단지의 분석이 통째로 실패한다. 코드를 추가·개명하면 구버전 문서에서
+ * 바로 재현되므로, 모르는 항목은 무시하는 쪽이 맞다.
+ */
+function isKnown(item: DevelopmentItem): boolean {
+  return item.type in DEVELOPMENT_POINTS && item.stage in STAGE_FACTOR
+}
+
 function isWithinRadius(item: DevelopmentItem): boolean {
   const spec = DEVELOPMENT_POINTS[item.type]
   if (spec.radiusM === 0) return true
@@ -58,7 +70,7 @@ function isWithinRadius(item: DevelopmentItem): boolean {
 
 export function scoreDevelopment(ctx: AxisContext): AxisResult {
   const weight = ctx.weights.DEVELOPMENT
-  const items = ctx.property.developments ?? []
+  const items = (ctx.property.developments ?? []).filter(isKnown)
 
   const applicable = items.filter(isWithinRadius)
   const excluded = items.length - applicable.length
