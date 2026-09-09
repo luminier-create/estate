@@ -276,3 +276,26 @@ describe('등급과 표시 점수의 일치', () => {
     expect(low.grade).toBe('S')
   })
 })
+
+describe('저장된 점수와 등급의 정합', () => {
+  it('등급은 언제나 저장된 총점에서 다시 유도된다', () => {
+    // 표시·등급·순위가 서로 다른 값을 보면 같은 숫자에 다른 등급이 붙는다.
+    for (let commute = 0; commute <= 120; commute += 3) {
+      const r = computeScore(
+        makeInput({
+          observations: makeObservations({
+            officeRoute: {
+              totalMinutes: commute,
+              transferCount: 1,
+              walkMeters: 500,
+              pathType: 3,
+              summary: 'x',
+            },
+          }),
+        }),
+      )
+      expect(r.grade).toBe(toGrade(r.totalScore))
+      expect(r.totalScore).toBe(Math.round(r.totalScore * 10) / 10)
+    }
+  })
+})

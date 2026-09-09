@@ -10,7 +10,7 @@ import 'server-only'
  */
 import { store } from './repo/store'
 import {
-  EMPTY_RESULT_TTL_MS,
+  UNKNOWN_RESULT_TTL_MS,
   quotaKey,
   quotaLimit,
   type CachePolicy,
@@ -80,7 +80,7 @@ async function load<T>(
   const value = await fn()
 
   const requested = ttlOverrideMs === undefined ? policy.ttlMs : ttlOverrideMs
-  const ttlMs = isEmptyResult(value) ? cappedEmptyTtl(requested) : requested
+  const ttlMs = isUnknownResult(value) ? cappedUnknownTtl(requested) : requested
   try {
     await store().set<CacheDoc<T>>(path, {
       key,
@@ -96,15 +96,25 @@ async function load<T>(
   return value
 }
 
-/** 관측이 아니라 "아무것도 못 얻었다"에 해당하는 결과인지 */
-function isEmptyResult(value: unknown): boolean {
-  return value === null || value === undefined || (Array.isArray(value) && value.length === 0)
+/**
+ * "조회는 됐는데 결과가 없다"와 "얻지 못했다"를 구분한다.
+ *
+ * 빈 배열은 이제 믿을 수 있다 — 장애를 빈 결과로 오인하던 경로는 provider 에서
+ * 막았다(카카오 키워드 전부 실패 시 throw, 국토부 응답 형식 오류 시 throw).
+ * 그리고 "주변에 유흥시설 없음"은 조용한 주거지의 가장 흔하고 가장 좋은 답이다.
+ * 그것까지 1시간마다 다시 물으면 캐시가 막으려던 호출을 오히려 늘린다.
+ *
+ * 반면 `null` 은 여전히 모호하다. ODsay 는 "경로 없음"과 API 오류를 둘 다 null
+ * 로 돌려주므로, 일시 장애가 30일 결측으로 굳지 않도록 짧게 잡는다.
+ */
+function isUnknownResult(value: unknown): boolean {
+  return value === null || value === undefined
 }
 
-function cappedEmptyTtl(requested: number | null): number {
+function cappedUnknownTtl(requested: number | null): number {
   return requested === null
-    ? EMPTY_RESULT_TTL_MS
-    : Math.min(requested, EMPTY_RESULT_TTL_MS)
+    ? UNKNOWN_RESULT_TTL_MS
+    : Math.min(requested, UNKNOWN_RESULT_TTL_MS)
 }
 
 // ─── 쿼터 ────────────────────────────────────────────────────
@@ -116,54 +126,92 @@ interface QuotaDoc {
   updatedAt: string
 }
 
+/**
+ * 이 프로세스가 오늘 선점한 건수. provider·날짜별로 하나씩 둔다.
+ *
+ * 상한 판정을 프로세스 안에서 먼저 하는 이유: 분석 한 번이 24개월치 실거래와
+ * POI 9종을 `Promise.all` 로 동시에 쏘고, 전체 재분석은 그걸 단지 수만큼
+ * 곱한다. 이 동시성은 거의 전부 한 인스턴스 안에서 발생하므로, 여기서 세면
+ * 저장소 왕복 없이 정확히 막힌다.
+ *
+ * 인스턴스가 여러 개면 각자 세므로 상한을 인스턴스 수만큼 넘길 수 있다.
+ * 그 초과분은 유계이고, 무료 API 라 "잘못 막는 쪽이 더 나쁘다"는 판단에 맞는다.
+ * 원격 카운터는 원자적 증가로 정확히 유지되므로 실제 사용량은 항상 볼 수 있다.
+ *
+ * 값이 Promise 인 것은 최초 원격 읽기를 동시 호출들이 공유하게 하기 위함이다.
+ */
+const quotaState = new Map<string, Promise<{ count: number }>>()
+
+function stateFor(key: string, path: string): Promise<{ count: number }> {
+  const existing = quotaState.get(key)
+  if (existing) return existing
+
+  const created = (async () => {
+    try {
+      const doc = await store().get<QuotaDoc>(path)
+      const n = Number(doc?.count ?? 0)
+      return { count: Number.isFinite(n) && n > 0 ? n : 0 }
+    } catch {
+      // 못 읽으면 0에서 시작한다 — 막는 쪽으로 실패하지 않는다
+      return { count: 0 }
+    }
+  })()
+
+  // await 전에 넣어야 동시 호출이 같은 promise 를 본다
+  quotaState.set(key, created)
+  // 날짜가 바뀌면 지난 키는 필요 없다
+  for (const k of quotaState.keys()) {
+    if (k !== key && k.startsWith(`${key.split('_')[0]}_`)) quotaState.delete(k)
+  }
+  return created
+}
+
 /** 오늘 남은 호출 가능 횟수. 상한을 넘었으면 0. */
 export async function remainingQuota(
   provider: QuotaProvider,
 ): Promise<number> {
+  const key = quotaKey(provider)
   const limit = quotaLimit(provider)
-  try {
-    const doc = await store().get<QuotaDoc>(`quota/${quotaKey(provider)}`)
-    return Math.max(0, limit - (doc?.count ?? 0))
-  } catch {
-    // 쿼터 조회 실패 시에는 막지 않는다 — 과금이 없는 무료 API 이므로
-    // 잘못 막는 쪽이 더 나쁘다
-    return limit
-  }
+  const state = await stateFor(key, `quota/${key}`)
+  return Math.max(0, limit - state.count)
 }
 
 /**
- * 호출 1건을 선점한다. 상한을 넘겼으면 선점을 되돌리고 false 를 돌려준다.
+ * 호출 1건을 선점한다. 상한에 도달했으면 false.
  *
  * 예전에는 "읽어서 남았는지 보고 → 따로 1 올리기" 였다. 그 사이에 다른 요청이
  * 끼어들면 갱신이 통째로 사라져서, 상한 5 에 동시 40건을 던지면 40건이 전부
- * 통과하고 카운터는 1까지만 올라갔다. 분석 파이프라인이 24개월치를 Promise.all
- * 로 동시에 쏘므로 이건 예외 상황이 아니라 정상 경로다.
+ * 통과하고 카운터는 1까지만 올라갔다. 그 다음에는 트랜잭션으로 고쳤는데,
+ * 외부 호출 1건마다 같은 문서에 트랜잭션을 걸어 단일 문서가 병목이 되고
+ * 경합으로 실패하면 통과시키는 — 붐빌수록 상한이 풀리는 — 구조가 됐다.
+ * 지금은 판정을 프로세스 안에서 하고 원격에는 읽지 않는 원자적 증가만 보낸다.
  */
 async function reserve(provider: QuotaProvider): Promise<boolean> {
   const key = quotaKey(provider)
   const path = `quota/${key}`
   const limit = quotaLimit(provider)
-  const meta = {
-    provider,
-    day: key.split('_')[1] ?? '',
-    updatedAt: new Date().toISOString(),
-  }
 
-  let next: number
+  const state = await stateFor(key, path)
+  if (state.count >= limit) return false
+  state.count += 1
+
   try {
-    next = await store().increment(path, 'count', 1, meta)
+    await store().increment(path, 'count', 1, {
+      provider,
+      day: key.split('_')[1] ?? '',
+      updatedAt: new Date().toISOString(),
+    })
   } catch {
-    // 카운터를 못 쓰면 막지 않는다 — 과금이 없는 무료 API 라 잘못 막는 쪽이 더 나쁘다
-    return true
-  }
-
-  if (next > limit) {
-    await store()
-      .increment(path, 'count', -1, meta)
-      .catch(() => undefined)
-    return false
+    // 원격 기록이 실패해도 프로세스 카운터는 이미 올라가 있어 상한은 지켜진다.
+    // 사용량 집계만 부정확해진다.
   }
   return true
+}
+
+/** 테스트에서 프로세스 상태를 비운다. 저장소를 비우는 것만으로는 부족하다. */
+export function __resetQuotaState(): void {
+  quotaState.clear()
+  pending.clear()
 }
 
 export class QuotaExceededError extends Error {

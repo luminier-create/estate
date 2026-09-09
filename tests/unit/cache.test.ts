@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   QuotaExceededError,
+  __resetQuotaState,
   cachedCall,
   remainingQuota,
   withCache,
@@ -8,10 +9,14 @@ import {
 } from '@/lib/cache'
 import { CACHE_POLICY, DAY_MS, quotaLimit } from '@/lib/cache-keys'
 
-/** 인메모리 저장소는 globalThis 에 있으므로 테스트마다 비운다. */
+/**
+ * 인메모리 저장소는 globalThis 에, 쿼터 선점 상태는 모듈 전역에 있다.
+ * 둘 다 비워야 테스트가 서로 간섭하지 않는다.
+ */
 function resetStore() {
   const g = globalThis as { __homefitStore?: Map<string, unknown> }
   g.__homefitStore?.clear()
+  __resetQuotaState()
 }
 
 beforeEach(resetStore)
@@ -195,5 +200,39 @@ describe('동시 요청', () => {
       if (prev === undefined) delete process.env.QUOTA_ODSAY
       else process.env.QUOTA_ODSAY = prev
     }
+  })
+})
+
+describe('빈 결과와 조회 실패의 구분', () => {
+  async function storedTtlHours(key: string, value: unknown) {
+    await withCache(CACHE_POLICY.poi, key, async () => value)
+    const g = globalThis as { __homefitStore?: Map<string, unknown> }
+    const doc = g.__homefitStore?.get(`${CACHE_POLICY.poi.collection}/${key}`) as
+      | { expiresAt: string | null }
+      | undefined
+    if (!doc || doc.expiresAt === null) return null
+    return (new Date(doc.expiresAt).getTime() - Date.now()) / (60 * 60 * 1000)
+  }
+
+  it('성공한 빈 결과는 정책 TTL 을 그대로 쓴다', async () => {
+    // "주변에 유흥시설 없음"은 조용한 주거지의 정상 관측이다. 이걸 매시간 다시
+    // 물으면 캐시가 막으려던 호출을 오히려 늘린다. POI 정책은 90일.
+    const hours = await storedTtlHours('empty-list', [])
+    expect(hours).toBeGreaterThan(24)
+  })
+
+  it('결과를 얻지 못한 경우(null)는 짧게만 캐시한다', async () => {
+    // ODsay 는 "경로 없음"과 API 오류를 둘 다 null 로 돌려준다.
+    const hours = await storedTtlHours('null-result', null)
+    expect(hours).toBeLessThanOrEqual(1)
+  })
+
+  it('TTL 무기한 정책에도 null 은 만료가 붙는다', async () => {
+    await withCache(CACHE_POLICY.geo, 'null-geo', async () => null)
+    const g = globalThis as { __homefitStore?: Map<string, unknown> }
+    const doc = g.__homefitStore?.get('cache_geo/null-geo') as
+      | { expiresAt: string | null }
+      | undefined
+    expect(doc?.expiresAt).not.toBeNull()
   })
 })

@@ -21,7 +21,20 @@ import { geoProvider, providerStatus } from '@/lib/providers'
 import { cachedCall } from '@/lib/cache'
 import { CACHE_POLICY, geocodeKey } from '@/lib/cache-keys'
 import { pyeongToM2 } from '@/lib/scoring/normalize'
+import { isKnownPresetId } from '@/lib/scoring/presets'
 import { AXIS_CODES, RISK_CODES } from '@/lib/scoring/types'
+
+/**
+ * 프리셋 id 는 알려진 값만 받는다.
+ *
+ * getPreset 은 모르는 id 에 조용히 balanced 를 쓰지만 원문은 그대로 저장되고,
+ * 분석 문서 ID 는 정규화된 id 로 만들어진다. 둘이 어긋나면 저장한 분석을 영영
+ * 다시 못 찾아 화면이 계속 "미분석"으로 남는다. 애초에 못 들어오게 막는다.
+ */
+const presetIdSchema = z
+  .string()
+  .min(1)
+  .refine(isKnownPresetId, { message: '알 수 없는 가중치 프리셋입니다.' })
 
 /**
  * 좌표는 범위를 제한한다. z.number() 는 Infinity 를 통과시키고, 그 좌표가
@@ -65,7 +78,7 @@ const profileSchema = z.object({
     members: z.number().min(1).max(10),
   }),
   areaUnit: z.enum(['PYEONG', 'M2']).optional(),
-  presetId: z.string().optional(),
+  presetId: presetIdSchema.optional(),
   customWeights: z.record(z.string(), z.number().finite().min(0).max(100)).optional(),
   completeOnboarding: z.boolean().optional(),
 })
@@ -319,7 +332,7 @@ export async function reanalyzeAllAction() {
 }
 
 const weightSchema = z.object({
-  presetId: z.string().min(1),
+  presetId: presetIdSchema,
   custom: z.record(z.string(), z.number().finite().min(0).max(100)).optional(),
 })
 

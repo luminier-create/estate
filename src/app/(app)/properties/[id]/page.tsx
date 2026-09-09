@@ -23,7 +23,7 @@ import {
   weakestAxes,
 } from '@/lib/scoring/aggregate'
 import { formatManwon, m2ToPyeong } from '@/lib/scoring/normalize'
-import { getPreset } from '@/lib/scoring/presets'
+import { getPreset, safePresetId } from '@/lib/scoring/presets'
 import { AXIS_LABEL } from '@/lib/scoring/types'
 import { STAGE_LABEL, DEVELOPMENT_POINTS } from '@/lib/scoring/axes/development'
 
@@ -40,7 +40,8 @@ export default async function PropertyDetailPage({
   const property = await getProperty(user.uid, id)
   if (!property) notFound()
 
-  const presetId = profile.weights.presetId
+  // 저장된 값이 손상돼도 분석 문서 ID 는 쓸 때와 같은 값으로 만들어야 한다
+  const presetId = safePresetId(profile.weights.presetId)
   const analysis = await getAnalysis(
     user.uid,
     analysisId(id, profileHash(profile), presetId),

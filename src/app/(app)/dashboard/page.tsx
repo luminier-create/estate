@@ -13,7 +13,7 @@ import {
   profileHash,
 } from '@/lib/repo'
 import { compareByScore } from '@/lib/scoring/aggregate'
-import { getPreset } from '@/lib/scoring/presets'
+import { getPreset, safePresetId } from '@/lib/scoring/presets'
 import { formatManwon } from '@/lib/scoring/normalize'
 
 export default async function DashboardPage() {
@@ -27,7 +27,8 @@ export default async function DashboardPage() {
     listArchivedProperties(user.uid),
   ])
   const hash = profileHash(profile)
-  const presetId = profile.weights.presetId
+  // 저장된 값이 손상돼도 분석 문서 ID 는 쓸 때와 같은 값으로 만들어야 한다
+  const presetId = safePresetId(profile.weights.presetId)
 
   const rows = await Promise.all(
     properties.map(async (property) => ({

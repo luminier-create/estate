@@ -25,8 +25,8 @@ export function ScoreBadge({
   size?: 'sm' | 'md' | 'lg'
 }) {
   const sizes = {
-    sm: 'size-12 text-base',
-    md: 'size-16 text-xl',
+    sm: 'size-12 text-sm',
+    md: 'size-16 text-lg',
     lg: 'size-24 text-3xl',
   }
   return (
@@ -38,7 +38,7 @@ export function ScoreBadge({
           sizes[size],
         )}
       >
-        {Math.round(score)}
+        {formatScore(score)}
         <span className="text-[10px] font-semibold">{grade}등급</span>
       </div>
       {size === 'lg' && (
@@ -48,6 +48,15 @@ export function ScoreBadge({
       )}
     </div>
   )
+}
+
+/**
+ * 등급 임계값이 소수 1자리 점수 위에 걸려 있으므로, 등급과 같이 보여주는 숫자를
+ * 정수로 뭉개면 안 된다 — 84.9(A)와 85.0(S)이 둘 다 "85"로 떠서 같은 숫자에 다른
+ * 등급이 붙는다. 소수점이 의미 없을 때만 떼어 자릿수를 아낀다.
+ */
+function formatScore(score: number): string {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1)
 }
 
 export function ScoreBar({ score, label }: { score: number; label?: string }) {

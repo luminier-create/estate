@@ -41,6 +41,12 @@ function isScored(a: AxisResult): a is AxisResult & { score: number } {
   return a.score !== null && Number.isFinite(a.score)
 }
 
+/**
+ * 등급은 저장되는 점수(소수 1자리)로 정한다. 임계값은 01-ALGORITHM.md 의 것이며
+ * 표시 편의를 위해 옮기지 않는다 — 대신 화면이 같은 정밀도로 보여준다
+ * (`ScoreBadge`). 정수로 뭉개 보여주면 84.9(A)와 85.0(S)이 똑같이 "85"로 떠서
+ * 같은 숫자에 다른 등급이 붙는다.
+ */
 export function toGrade(score: number): Grade {
   return GRADE_TABLE.find((g) => score >= g.min)?.grade ?? 'E'
 }
@@ -90,8 +96,7 @@ export function computeScore(input: ScoringInput): ScoreResult {
       : 0
 
   const { risks, penalty } = evaluateRisks(input)
-  // 등급은 반올림 후 값으로 정한다. 반올림 전 값을 쓰면 84.96 과 85.04 가
-  // 화면에 똑같이 "85점"으로 뜨면서 A 와 S 로 갈린다.
+  // 등급·표시·순위가 모두 같은 값을 보도록 여기서 한 번만 반올림한다
   const totalScore = round1(Math.min(100, Math.max(0, baseScore - penalty)))
 
   const declaredWeight = axes.reduce((s, a) => s + a.weight, 0)

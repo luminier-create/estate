@@ -68,9 +68,18 @@ function isWithinRadius(item: DevelopmentItem): boolean {
   return item.distanceM <= spec.radiusM
 }
 
+function unknownNote(count: number): string[] {
+  return count > 0
+    ? [`인식할 수 없는 유형·단계로 등록된 ${count}건은 평가하지 못했습니다. 단지 상세에서 다시 등록해 주십시오.`]
+    : []
+}
+
 export function scoreDevelopment(ctx: AxisContext): AxisResult {
   const weight = ctx.weights.DEVELOPMENT
-  const items = (ctx.property.developments ?? []).filter(isKnown)
+  const registered = ctx.property.developments ?? []
+  const items = registered.filter(isKnown)
+  // 사용자가 등록해둔 호재가 화면에서 소리 없이 사라지면 안 된다
+  const unknown = registered.length - items.length
 
   const applicable = items.filter(isWithinRadius)
   const excluded = items.length - applicable.length
@@ -86,6 +95,7 @@ export function scoreDevelopment(ctx: AxisContext): AxisResult {
         '등록된 호재가 없어 중립 점수 40점을 적용했습니다.',
         '단지 상세에서 호재를 직접 등록하면 점수에 반영됩니다.',
         ...(excluded > 0 ? [`영향 반경을 벗어난 ${excluded}건은 제외되었습니다.`] : []),
+        ...unknownNote(unknown),
       ],
       sources: [{ label: '사용자 입력 / 호재 큐레이션 DB', asOf: '' }],
       confidence: 'low',
@@ -113,6 +123,7 @@ export function scoreDevelopment(ctx: AxisContext): AxisResult {
   if (excluded > 0) {
     details.push(`영향 반경을 벗어난 ${excluded}건은 계산에서 제외되었습니다.`)
   }
+  details.push(...unknownNote(unknown))
   details.push('확실성이 낮은 단계일수록 계수가 낮게 적용됩니다. 출처가 없는 호재는 신중히 판단하십시오.')
 
   const score = Math.min(100, Math.max(0, total))

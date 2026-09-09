@@ -10,7 +10,7 @@ import {
   listProperties,
   profileHash,
 } from '@/lib/repo'
-import { getPreset, normalizeWeights } from '@/lib/scoring/presets'
+import { getPreset, normalizeWeights, safePresetId } from '@/lib/scoring/presets'
 
 export default async function ComparePage() {
   const user = await requireUserOrRedirect()
@@ -19,7 +19,8 @@ export default async function ComparePage() {
 
   const properties = await listProperties(user.uid)
   const hash = profileHash(profile)
-  const presetId = profile.weights.presetId
+  // 저장된 값이 손상돼도 분석 문서 ID 는 쓸 때와 같은 값으로 만들어야 한다
+  const presetId = safePresetId(profile.weights.presetId)
 
   const rows = (
     await Promise.all(

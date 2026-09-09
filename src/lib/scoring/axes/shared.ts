@@ -41,8 +41,16 @@ export function ok(params: {
 }): AxisResult {
   // 계산 불능(NaN·Infinity)은 결측으로 강등한다. 그대로 두면 총점이 NaN 이 되거나
   // clamp 를 거치며 그럴듯한 숫자로 위장된다 — 둘 다 순위를 조용히 망친다.
+  //
+  // 호출부의 reason 은 쓰지 않는다. 점수를 못 낸 상황이면 그 문장도 같은 값으로
+  // 만들어졌을 가능성이 높아 "대중교통 NaN시간 NaN분" 같은 문구가 그대로
+  // 사용자에게 나간다.
   if (!Number.isFinite(params.score)) {
-    return missing(params.axis, params.weight, `${params.reason} (점수를 산출하지 못했습니다)`)
+    return missing(
+      params.axis,
+      params.weight,
+      '필요한 값을 계산하지 못해 이 항목을 평가할 수 없습니다.',
+    )
   }
   return {
     axis: params.axis,

@@ -4,7 +4,7 @@
  */
 
 /** 알고리즘 버전. 로직 변경 시 반드시 올린다 — 캐시 무효화 키로 쓰인다. */
-export const ALGORITHM_VERSION = 'v1.0.2'
+export const ALGORITHM_VERSION = 'v1.0.3'
 
 export const AXIS_CODES = [
   'COMMUTE',

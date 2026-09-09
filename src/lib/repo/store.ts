@@ -16,16 +16,18 @@ export interface DocStore {
   delete(path: string): Promise<void>
   list<T>(collectionPath: string): Promise<T[]>
   /**
-   * 숫자 필드를 원자적으로 증감하고 **증감 후 값**을 돌려준다.
-   * 쿼터 카운터처럼 동시 요청이 같은 문서를 갱신하는 경우, read-then-write 로는
-   * 갱신 손실이 나서 상한이 지켜지지 않는다.
+   * 숫자 필드를 원자적으로 증감한다.
+   *
+   * 읽지 않고 쓰므로 갱신 손실도, 경합 재시도도 없다. 증감 후 값은 돌려주지
+   * 않는다 — 그걸 알려면 트랜잭션이 필요한데, 외부 호출 1건마다 같은 문서에
+   * 트랜잭션을 걸면 분석 한 번(36건 동시)에 단일 문서가 병목이 된다.
    */
   increment(
     path: string,
     field: string,
     by: number,
     meta?: Record<string, unknown>,
-  ): Promise<number>
+  ): Promise<void>
 }
 
 class FirestoreStore implements DocStore {
@@ -53,17 +55,11 @@ class FirestoreStore implements DocStore {
     field: string,
     by: number,
     meta: Record<string, unknown> = {},
-  ): Promise<number> {
-    const ref = adminDb().doc(path)
-    // FieldValue.increment 는 증감 후 값을 돌려주지 않는다. 상한 판정에 그 값이
-    // 필요하므로 트랜잭션을 쓴다 (경합 시 Firestore 가 재시도한다).
-    return adminDb().runTransaction(async (tx) => {
-      const snap = await tx.get(ref)
-      const prev = Number((snap.data() as Record<string, unknown> | undefined)?.[field] ?? 0)
-      const next = (Number.isFinite(prev) ? prev : 0) + by
-      tx.set(ref, { ...meta, [field]: next }, { merge: true })
-      return next
-    })
+  ): Promise<void> {
+    const { FieldValue } = await import('firebase-admin/firestore')
+    await adminDb()
+      .doc(path)
+      .set({ ...meta, [field]: FieldValue.increment(by) }, { merge: true })
   }
 }
 
@@ -124,13 +120,15 @@ class MemoryStore implements DocStore {
     field: string,
     by: number,
     meta: Record<string, unknown> = {},
-  ): Promise<number> {
+  ): Promise<void> {
     // 단일 프로세스이고 이 함수 안에 await 이 없으므로 그 자체로 원자적이다.
     const prev = (memory.get(path) as Record<string, unknown> | undefined) ?? {}
     const cur = Number(prev[field] ?? 0)
-    const next = (Number.isFinite(cur) ? cur : 0) + by
-    memory.set(path, { ...prev, ...structuredClone(meta), [field]: next })
-    return next
+    memory.set(path, {
+      ...prev,
+      ...structuredClone(meta),
+      [field]: (Number.isFinite(cur) ? cur : 0) + by,
+    })
   }
 }
 
