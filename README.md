@@ -27,7 +27,12 @@ HomeFit은 사용자 조건(예산·사무실·자주 가는 장소·가구 구�
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui
 Firebase Authentication (Google) · Cloud Firestore · Firebase App Hosting
 
-## 설계 문서
+## 문서
+
+작업을 시작하기 전에 **[CLAUDE.md](CLAUDE.md)** 를 읽는다 — 작업 규약과 실제로 걸렸던
+함정을 모아둔 문서다.
+
+### 확정 스펙
 
 | 문서 | 내용 |
 |---|---|
@@ -37,6 +42,34 @@ Firebase Authentication (Google) · Cloud Firestore · Firebase App Hosting
 | [03-DATA-SOURCES](docs/03-DATA-SOURCES.md) | 외부 API 스펙, 키 발급 절차, Mock 전략 |
 | [04-DATA-MODEL](docs/04-DATA-MODEL.md) | Firestore 스키마, 보안 규칙, 인덱스 |
 | [05-ROADMAP](docs/05-ROADMAP.md) | 5단계 개발 계획 및 완료 기준 |
+
+### 계속 자라는 문서
+
+| 문서 | 내용 | 주 갱신자 |
+|---|---|---|
+| [10-KNOWLEDGE](docs/10-KNOWLEDGE.md) | API 정책 변화·비용·도메인 지식. 확신도 라벨·출처·확인일 필수 | `homefit-research` |
+| [11-ALGORITHM-LAB](docs/11-ALGORITHM-LAB.md) | 알고리즘 가설→검증→채택/기각 이력 | `homefit-dev`·`homefit-product` |
+
+`01-ALGORITHM` 은 현행 스펙, `11-LAB` 은 왜 그렇게 됐는지와 실험 이력이다.
+`03-DATA-SOURCES` 는 API 스펙 고정, `10-KNOWLEDGE` 는 정책 변화 추적이다.
+
+## 에이전트와 스킬
+
+`.claude/agents/` 에 역할별 에이전트, `.claude/skills/` 에 반복 절차가 있다.
+
+| 에이전트 | 권한 | 쓰는 때 |
+|---|---|---|
+| `homefit-dev` | 전체 | 구현·버그 수정·리팩터링 |
+| `homefit-research` | `docs/` 쓰기 + 웹검색 | API 정책·도메인 사실 조사 |
+| `homefit-product` | `docs/` 쓰기 | 기획·우선순위·UX 개선안 |
+| `homefit-reviewer` | 읽기 전용 | 변경분 검토 |
+
+| 스킬 | 고정하는 절차 |
+|---|---|
+| `homefit-axis` | 곡선 설계 → 경계값·골든 케이스 → 버전 상향 → 문서 반영 |
+| `homefit-provider` | 인터페이스 → mock → 실구현 → 캐시·쿼터 → 결측 내성 |
+| `homefit-feature` | 구현 → 단위·E2E·접근성 → cold start → 번들 확인 |
+| `homefit-ship` | 전체 검증 + 회귀 확인 + 문서 최신화 |
 
 ## 시작하기
 

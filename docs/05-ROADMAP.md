@@ -95,6 +95,19 @@ Phase 4는 Phase 2의 인터페이스 확정 후 착수.
 
 ---
 
+## 운영 체계
+
+Phase 5 이후는 아래 3축 문서와 4개 에이전트로 계속 성장시킨다.
+
+| 축 | 문서 | 역할 |
+|---|---|---|
+| 작업 규약 | `CLAUDE.md` | 컨벤션·함정·금지사항 |
+| 정보 수집 | `docs/10-KNOWLEDGE.md` | API 정책 변화·비용·도메인 지식 |
+| 알고리즘 | `docs/11-ALGORITHM-LAB.md` | 가설→검증→채택/기각 이력 |
+
+에이전트는 권한을 분리해 서로의 작업을 덮어쓰지 않게 했다 —
+`homefit-reviewer` 는 읽기 전용, `homefit-research`·`homefit-product` 는 `docs/` 만 쓴다.
+
 ## 정의된 완료 기준 (Definition of Done)
 
 전 단계 공통:
