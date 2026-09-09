@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check:firebase": "node scripts/check-firebase.mjs"
+    "check:firebase": "node scripts/check-firebase.mjs",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.0",

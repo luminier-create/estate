@@ -19,7 +19,8 @@
 | `npm test` | 단위 테스트 (스코어링·캐시) |
 | `npm run test:e2e` | E2E + 접근성 감사 |
 | `npm run build` | 프로덕션 빌드 |
-| `npm run check:firebase` | Firebase 설정 점검 |
+| `npm run check:firebase` | Firebase 설정 점검 (배포된 규칙 대조 포함) |
+| `npm run deploy:rules` | Firestore 보안 규칙·인덱스 배포 |
 
 ## 구조
 
@@ -55,10 +56,16 @@ src/app/(app)/      인증이 필요한 화면.
 `analyze.ts` 같은 서버 모듈은 vitest 에서 import 할 수 없다. 테스트하고 싶은
 변환 로직은 `lib/scoring/` 으로 빼낸다 (`landmarks.ts` 가 그 예).
 
-### 4. 점수는 서버에서만 기록한다
+### 4. 쓰기는 전부 서버에서 한다
 
-Firestore 규칙이 `analyses` 의 클라이언트 쓰기를 막고 있다. 점수를 클라이언트에서
-저장하는 코드를 넣지 말 것.
+Firestore 규칙이 클라이언트 쓰기를 전면 차단한다. 브라우저는 Firebase Auth 만
+쓰고 Firestore 에는 직접 접근하지 않으며, 모든 저장은 서버 액션이 Zod 로 검증한
+뒤 Admin SDK 로 수행한다. 클라이언트에서 Firestore 에 쓰는 코드를 넣지 말 것 —
+그 순간 서버 액션의 입력 검증이 우회 가능한 경계 밖으로 나간다.
+
+**규칙을 고쳤으면 `npm run deploy:rules` 로 배포한다.** 파일만 고치고 배포하지
+않으면 아무것도 바뀌지 않는다. `npm run check:firebase` 가 배포본을 받아 로컬
+파일과 대조하므로, 배포를 잊으면 거기서 걸린다.
 
 ### 5. 화면과 점수의 기준을 일치시킨다
 

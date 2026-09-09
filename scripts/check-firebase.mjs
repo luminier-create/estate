@@ -196,10 +196,95 @@ async function main() {
     process.exit(1)
   }
 
+  // 4. 배포된 보안 규칙이 로컬 firestore.rules 와 같은지
+  console.log('\n4) 배포된 보안 규칙')
+  await checkDeployedRules(app)
+
+  if (failed > 0) {
+    console.log(`\n${RED}점검 ${failed}건 실패. 위 안내를 처리한 뒤 다시 실행하십시오.${RESET}\n`)
+    return
+  }
   console.log(`\n${GREEN}Firebase 설정 정상. npm run dev 로 구글 로그인을 확인하십시오.${RESET}\n`)
 }
 
-main().catch((e) => {
-  console.error(`\n${RED}점검 중 오류: ${e.message}${RESET}\n`)
-  process.exit(1)
-})
+/**
+ * 콘솔에서 Firestore 를 만들면 기본이 테스트 모드(전면 개방)다. `firestore.rules`
+ * 를 배포하지 않으면 로그인한 사용자가 브라우저 SDK 로 자기 문서를 마음대로 쓸 수
+ * 있고, 서버 액션의 입력 검증이 통째로 우회된다. 파일이 있다는 것과 적용됐다는
+ * 것은 다르므로, 배포본을 받아 로컬 파일과 대조한다.
+ *
+ * 권한이 없거나 네트워크가 막히면 경고로 낮춘다 — 이 확인 하나 때문에
+ * 나머지 점검 결과를 못 쓰게 만들 이유는 없다.
+ */
+async function checkDeployedRules(app) {
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID
+  const localPath = resolve(ROOT, 'firestore.rules')
+
+  if (!existsSync(localPath)) {
+    warn('firestore.rules 파일이 없어 대조를 건너뜁니다.')
+    return
+  }
+
+  let token
+  try {
+    const cred = app.options.credential
+    token = (await cred.getAccessToken()).access_token
+  } catch (e) {
+    warn(`액세스 토큰을 얻지 못해 대조를 건너뜁니다: ${e.message}`)
+    return
+  }
+
+  const api = async (path) => {
+    const res = await fetch(`https://firebaserules.googleapis.com/v1/${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+    return res.json()
+  }
+
+  let deployed
+  try {
+    const release = await api(`projects/${projectId}/releases/cloud.firestore`)
+    const ruleset = await api(release.rulesetName)
+    deployed = (ruleset.source?.files ?? []).map((f) => f.content).join('\n')
+  } catch (e) {
+    if (/^40[13]/.test(e.message)) {
+      warn('규칙 조회 권한이 없어 대조를 건너뜁니다.')
+      dim('서비스 계정에 Firebase Rules 뷰어 권한이 없을 수 있습니다.')
+    } else if (/^404/.test(e.message)) {
+      failed++
+      fail('배포된 Firestore 규칙이 없습니다 — 기본 규칙이 적용 중일 수 있습니다.')
+      dim('firebase deploy --only firestore:rules')
+    } else {
+      warn(`규칙 조회 실패로 대조를 건너뜁니다: ${e.message}`)
+    }
+    return
+  }
+
+  // 공백·주석 차이는 무시하고 실제 규칙만 비교한다
+  const normalize = (src) =>
+    src
+      .split('\n')
+      .map((l) => l.replace(/\/\/.*$/, '').trim())
+      .filter(Boolean)
+      .join('\n')
+
+  if (normalize(deployed) === normalize(readFileSync(localPath, 'utf8'))) {
+    ok('배포된 규칙이 firestore.rules 와 일치합니다.')
+    return
+  }
+
+  failed++
+  fail('배포된 규칙이 로컬 firestore.rules 와 다릅니다.')
+  if (/allow\s+read,\s*write\s*:\s*if\s+true/.test(deployed)) {
+    dim('배포본에 전면 허용 규칙이 있습니다 — 테스트 모드로 보입니다.')
+  }
+  dim('firebase deploy --only firestore:rules,firestore:indexes')
+}
+
+main()
+  .then(() => process.exit(failed > 0 ? 1 : 0))
+  .catch((e) => {
+    console.error(`\n${RED}점검 중 오류: ${e.message}${RESET}\n`)
+    process.exit(1)
+  })

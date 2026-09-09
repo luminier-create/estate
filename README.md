@@ -119,8 +119,13 @@ E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저�
 ```bash
 firebase init apphosting          # 저장소 연결
 firebase apphosting:secrets:set KAKAO_REST_API_KEY   # 키마다 반복
-firebase deploy --only firestore  # 보안 규칙·인덱스
+npm run deploy:rules              # 보안 규칙·인덱스
 ```
+
+**규칙 배포는 선택이 아니다.** 콘솔에서 Firestore 를 만들면 기본이 테스트 모드
+(전면 개방)라, 배포하지 않으면 로그인한 사용자가 브라우저 SDK 로 자기 문서를
+마음대로 쓸 수 있고 서버 액션의 입력 검증이 통째로 우회된다.
+`npm run check:firebase` 가 배포본을 받아 `firestore.rules` 와 대조한다.
 
 `apphosting.yaml` 이 시크릿 참조와 런타임 설정을 담고 있다. 서버 전용 키는
 `availability: [RUNTIME]` 로 지정해 빌드 산출물에 포함되지 않게 했다.
