@@ -120,6 +120,20 @@ pkill -f "nex[t]-server"; rm -rf .next && npm run test:e2e
 데모 로그인은 쿠키를 받은 뒤 이동한다. 이동을 기다리지 않고 다음 요청을 보내면
 쿠키 없이 랜딩에 머문다. `waitForURL` 로 이동을 기다린다.
 
+### 이 작업 환경에서는 외부 API 호스트에 닿지 않는다
+
+`apis.data.go.kr`(국토부), `dapi.kakao.com`·`openapi.kakao.com`(카카오),
+`api.odsay.com`, `www.data.go.kr` 이 전부 egress 프록시에서 막힌다
+(`CONNECT tunnel failed, response 403`). 2026-09-09 확인.
+
+**Provider 를 여기서 실호출로 검증할 수 없다는 뜻이다.** 이 환경의 모든 실행은
+Mock Provider 로 떨어지고, CI 가 키 없이 통과하는 것도 그래서다. 결과적으로
+로드맵 4.x(실데이터 연동) 작업은 여기서 코드를 쓰더라도 응답 스키마를 눈으로
+확인한 것이 아니므로, 실키가 있는 환경에서 반드시 재검증해야 한다.
+
+API 문서 사이트도 같이 막히므로, 필드명·엔드포인트를 검색 스니펫이나 2차 출처만
+보고 코드에 넣지 말 것 (`docs/10-KNOWLEDGE.md` §1.5 가 그렇게 막힌 사례다).
+
 ### 이 컨테이너에서 E2E 는 `PLAYWRIGHT_CHROMIUM_PATH` 를 줘야 돈다
 
 기본 경로 탐색은 `chromium_headless_shell-<빌드번호>` 를 찾는데, 미리 깔린 것은
