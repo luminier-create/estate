@@ -130,3 +130,70 @@ describe('cachedCall', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('동시 요청', () => {
+  it('같은 키 동시 요청은 원본을 한 번만 부른다', async () => {
+    let running = 0
+    let maxConcurrent = 0
+    const fn = vi.fn(async () => {
+      running += 1
+      maxConcurrent = Math.max(maxConcurrent, running)
+      await new Promise((r) => setTimeout(r, 5))
+      running -= 1
+      return 'v'
+    })
+
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => withCache(CACHE_POLICY.market, 'same', fn)),
+    )
+
+    expect(results).toEqual(Array(10).fill('v'))
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(maxConcurrent).toBe(1)
+  })
+
+  it('병합된 요청이 실패하면 전원이 같은 오류를 받고 캐시는 비어 있다', async () => {
+    const failing = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 5))
+      throw new Error('원본 실패')
+    })
+    const settled = await Promise.allSettled(
+      Array.from({ length: 5 }, () => withCache(CACHE_POLICY.market, 'boom', failing)),
+    )
+    expect(settled.every((s) => s.status === 'rejected')).toBe(true)
+    expect(failing).toHaveBeenCalledTimes(1)
+
+    // 실패는 캐시되지 않으므로 다음 요청은 다시 시도한다
+    const ok = await withCache(CACHE_POLICY.market, 'boom', async () => 'recovered')
+    expect(ok).toBe('recovered')
+  })
+
+  it('동시 요청이 쿼터 상한을 넘기지 못한다', async () => {
+    const prev = process.env.QUOTA_ODSAY
+    process.env.QUOTA_ODSAY = '5'
+    try {
+      const fn = vi.fn(async () => {
+        await new Promise((r) => setTimeout(r, 1))
+        return 'ok'
+      })
+
+      const settled = await Promise.allSettled(
+        Array.from({ length: 40 }, () => withQuota('odsay', fn)),
+      )
+      const passed = settled.filter((s) => s.status === 'fulfilled').length
+
+      // 예전에는 read-then-write 라 40건이 전부 통과하고 카운터는 1까지만 올랐다
+      expect(passed).toBe(5)
+      expect(fn).toHaveBeenCalledTimes(5)
+      expect(await remainingQuota('odsay')).toBe(0)
+      expect(
+        settled.filter((s) => s.status === 'rejected'),
+      ).toSatisfy((rejected: PromiseRejectedResult[]) =>
+        rejected.every((r) => r.reason instanceof QuotaExceededError),
+      )
+    } finally {
+      if (prev === undefined) delete process.env.QUOTA_ODSAY
+      else process.env.QUOTA_ODSAY = prev
+    }
+  })
+})

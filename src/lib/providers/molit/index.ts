@@ -77,10 +77,16 @@ export class MolitMarketProvider implements MarketProvider {
       }
     }
 
-    const code = parsed.response?.header?.resultCode
+    // data.go.kr 은 키 오류·한도 초과를 HTTP 200 + <OpenAPI_ServiceResponse> 로 돌려준다.
+    // 그 응답에는 `response` 키가 아예 없어서, 형태만 보고 넘기면 "거래 0건"으로
+    // 읽히고 그 빈 배열이 과거 월 무기한 캐시에 굳는다.
+    if (!parsed.response) {
+      throw new Error(`국토부 실거래가 API 응답 형식 오류: ${text.slice(0, 200)}`)
+    }
+    const code = parsed.response.header?.resultCode
     if (code && code !== '00' && code !== '000') {
       throw new Error(
-        `국토부 실거래가 API 응답 오류: ${parsed.response?.header?.resultMsg ?? code}`,
+        `국토부 실거래가 API 응답 오류: ${parsed.response.header?.resultMsg ?? code}`,
       )
     }
 

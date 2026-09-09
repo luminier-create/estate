@@ -22,28 +22,59 @@ describe('캐시 키', () => {
 
   it('주소 표기 차이가 캐시를 가르지 않는다', () => {
     expect(normalizeAddress('  서울 강남구   도곡동 ')).toBe('서울 강남구 도곡동')
-    expect(geocodeKey('서울 강남구 도곡동')).toBe(geocodeKey(' 서울  강남구 도곡동 '))
+    expect(geocodeKey('kakao', '서울 강남구 도곡동')).toBe(
+      geocodeKey('kakao', ' 서울  강남구 도곡동 '),
+    )
   })
 
   it('다른 주소는 다른 키', () => {
-    expect(geocodeKey('서울 강남구')).not.toBe(geocodeKey('서울 노원구'))
+    expect(geocodeKey('kakao', '서울 강남구')).not.toBe(
+      geocodeKey('kakao', '서울 노원구'),
+    )
   })
 
   it('POI 키는 카테고리·반경까지 구분한다', () => {
-    const a = poiKey('SUBWAY', 37.5, 127, 2000)
-    expect(a).not.toBe(poiKey('MART', 37.5, 127, 2000))
-    expect(a).not.toBe(poiKey('SUBWAY', 37.5, 127, 3000))
+    const a = poiKey('kakao', 'SUBWAY', 37.5, 127, 2000)
+    expect(a).not.toBe(poiKey('kakao', 'MART', 37.5, 127, 2000))
+    expect(a).not.toBe(poiKey('kakao', 'SUBWAY', 37.5, 127, 3000))
   })
 
   it('경로 키는 방향과 수단을 구분한다', () => {
     const from = { lat: 37.5, lng: 127 }
     const to = { lat: 37.6, lng: 127.1 }
-    expect(routeKey(from, to, 'BUS')).not.toBe(routeKey(to, from, 'BUS'))
-    expect(routeKey(from, to, 'BUS')).not.toBe(routeKey(from, to, 'SUBWAY'))
+    expect(routeKey('odsay', from, to, 'BUS')).not.toBe(
+      routeKey('odsay', to, from, 'BUS'),
+    )
+    expect(routeKey('odsay', from, to, 'BUS')).not.toBe(
+      routeKey('odsay', from, to, 'SUBWAY'),
+    )
   })
 
   it('실거래 키는 법정동·월 단위', () => {
-    expect(marketKey('11680', '202608')).toBe('market_11680_202608')
+    expect(marketKey('molit', '11680', '202608')).toBe('market_molit_11680_202608')
+  })
+
+  it('모의 구현과 실구현이 같은 칸을 쓰지 않는다', () => {
+    // 키 없이 배포해 캐시가 찬 뒤 API 키를 넣으면 모의 값이 계속 나오던 문제.
+    // geo 는 TTL 이 무기한이라 손으로 지우기 전까지 영원히 그랬다.
+    const at = { lat: 37.5, lng: 127 }
+    expect(geocodeKey('mock-geo', '서울')).not.toBe(geocodeKey('kakao', '서울'))
+    expect(poiKey('mock-geo', 'MART', 37.5, 127, 2000)).not.toBe(
+      poiKey('kakao', 'MART', 37.5, 127, 2000),
+    )
+    expect(routeKey('mock-transit', at, at, 'ALL')).not.toBe(
+      routeKey('odsay', at, at, 'ALL'),
+    )
+    expect(marketKey('mock-market', '11680', '202608')).not.toBe(
+      marketKey('molit', '11680', '202608'),
+    )
+  })
+
+  it('정류장 조회 소스가 바뀌면 키도 바뀐다', () => {
+    // ODSAY_API_KEY 유무에 따라 ODsay 정류장 API 와 카카오 키워드 검색이 갈린다.
+    expect(poiKey('odsay', 'BUS_STOP', 37.5, 127, 800)).not.toBe(
+      poiKey('kakao', 'BUS_STOP', 37.5, 127, 800),
+    )
   })
 })
 

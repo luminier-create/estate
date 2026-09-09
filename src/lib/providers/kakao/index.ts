@@ -191,6 +191,8 @@ export class KakaoGeoProvider implements GeoProvider {
     } else {
       // 카테고리 코드가 없는 항목은 키워드 검색을 합쳐서 근사한다
       const queries = KEYWORD_QUERIES[category] ?? []
+      let lastError: unknown = null
+      let succeeded = 0
       for (const q of queries) {
         try {
           const data = await kakaoFetch<{ documents: KakaoDoc[] }>(
@@ -206,9 +208,20 @@ export class KakaoGeoProvider implements GeoProvider {
             this.apiKey,
           )
           docs.push(...data.documents)
-        } catch {
+          succeeded += 1
+        } catch (e) {
           // 개별 키워드 실패는 무시하고 나머지로 진행한다
+          lastError = e
         }
+      }
+      // 전부 실패한 것은 "주변에 없음"이 아니라 조회 실패다. 빈 배열로 돌려주면
+      // RISK 자동 감점(유흥·기피시설·도로소음)이 조용히 사라지고 90일 캐시된다.
+      if (succeeded === 0 && queries.length > 0) {
+        throw new Error(
+          `카카오 키워드 검색 전부 실패 (${category}): ${
+            lastError instanceof Error ? lastError.message : String(lastError)
+          }`,
+        )
       }
     }
 

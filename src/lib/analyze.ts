@@ -175,7 +175,7 @@ export async function collectObservations(
     safe(() =>
       cachedCall(
         CACHE_POLICY.poi,
-        poiKey(category, at.lat, at.lng, radiusM),
+        poiKey(geo.name, category, at.lat, at.lng, radiusM),
         QUOTA_OF.geo,
         () => geo.nearbyByCategory(category, at, radiusM),
       ),
@@ -196,7 +196,13 @@ export async function collectObservations(
     safe(() =>
       cachedCall(
         CACHE_POLICY.poi,
-        poiKey('BUS_STOP', at.lat, at.lng, POI_RADIUS.BUS_STOP),
+        poiKey(
+          stops ? stops.name : geo.name,
+          'BUS_STOP',
+          at.lat,
+          at.lng,
+          POI_RADIUS.BUS_STOP,
+        ),
         stops ? QUOTA_OF.transit : QUOTA_OF.geo,
         () =>
           stops
@@ -218,7 +224,7 @@ export async function collectObservations(
     safe(() =>
       cachedCall(
         CACHE_POLICY.route,
-        routeKey(at, to, mode),
+        routeKey(transit.name, at, to, mode),
         QUOTA_OF.transit,
         () => transit.route(at, to, mode),
       ),
@@ -253,7 +259,7 @@ export async function collectObservations(
       safe(() =>
         cachedCall(
           CACHE_POLICY.market,
-          marketKey(property.lawdCd, m),
+          marketKey(market.name, property.lawdCd, m),
           QUOTA_OF.market,
           () => market.trades(property.lawdCd, m),
           // 최근 월은 신고가 계속 들어오므로 짧게, 확정된 과거 월은 무기한

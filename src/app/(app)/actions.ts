@@ -132,11 +132,12 @@ export async function savePropertyAction(input: PropertyFormInput) {
 
   // 주소→좌표는 변하지 않으므로 무기한 캐시한다
   const query = data.address || data.name
+  const geo = geoProvider()
   const geocoded = await cachedCall(
     CACHE_POLICY.geo,
-    geocodeKey(query),
+    geocodeKey(geo.name, query),
     providerStatus.geo === 'kakao' ? 'kakao' : null,
-    () => geoProvider().geocode(query),
+    () => geo.geocode(query),
   ).catch(() => null)
 
   if (geocoded) {

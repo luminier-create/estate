@@ -8,6 +8,16 @@ import { shortHash } from './utils'
 
 export const DAY_MS = 24 * 60 * 60 * 1000
 
+/**
+ * 빈 결과(null·[])의 최대 캐시 수명.
+ *
+ * 외부 API 장애를 "주변에 아무것도 없음"과 구분하지 못하는 경우가 있다.
+ * 그 빈 값이 정책 TTL 로 굳으면 — geo·과거월 실거래는 TTL 이 무기한이다 —
+ * 일시적 장애 한 번이 해당 축을 영구 결측으로 만들고, 캐시를 손으로 지우기
+ * 전까지 자동 복구되지 않는다. 그래서 빈 결과만 짧게 잡아 스스로 회복하게 한다.
+ */
+export const EMPTY_RESULT_TTL_MS = 60 * 60 * 1000
+
 /** TTL이 null 이면 무기한이다. */
 export interface CachePolicy {
   collection: string
@@ -24,29 +34,46 @@ export function normalizeAddress(address: string): string {
   return address.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
-export function geocodeKey(address: string): string {
-  return `geo_${shortHash(normalizeAddress(address))}`
+/**
+ * 어느 구현이 만든 값인지를 모든 키에 박는다.
+ *
+ * 이게 없으면 모의 데이터와 실데이터가 같은 칸을 쓴다. 키 없이 배포해 캐시가
+ * 채워진 뒤 API 키를 넣으면 모의 값이 계속 나오고, geo 는 TTL 이 무기한이라
+ * 영원히 그렇다. 정류장 조회처럼 키 유무에 따라 소스가 바뀌는 경로도 마찬가지다.
+ */
+function sourceTag(source: string): string {
+  return source.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+}
+
+export function geocodeKey(source: string, address: string): string {
+  return `geo_${sourceTag(source)}_${shortHash(normalizeAddress(address))}`
 }
 
 export function poiKey(
+  source: string,
   category: string,
   lat: number,
   lng: number,
   radiusM: number,
 ): string {
-  return `poi_${category}_${coordKey(lat, lng)}_${radiusM}`
+  return `poi_${sourceTag(source)}_${category}_${coordKey(lat, lng)}_${radiusM}`
 }
 
 export function routeKey(
+  source: string,
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
   mode: string,
 ): string {
-  return `route_${coordKey(from.lat, from.lng)}_${coordKey(to.lat, to.lng)}_${mode}`
+  return `route_${sourceTag(source)}_${coordKey(from.lat, from.lng)}_${coordKey(to.lat, to.lng)}_${mode}`
 }
 
-export function marketKey(lawdCd: string, yyyymm: string): string {
-  return `market_${lawdCd}_${yyyymm}`
+export function marketKey(
+  source: string,
+  lawdCd: string,
+  yyyymm: string,
+): string {
+  return `market_${sourceTag(source)}_${lawdCd}_${yyyymm}`
 }
 
 /**
