@@ -72,9 +72,10 @@ export function scoreAmenity(ctx: AxisContext): AxisResult {
     details.push(
       `보유 시설: ${communityFacilities.map((f) => FACILITY_LABEL[f]).join(', ')}`,
     )
-  } else if (communityFacilities) {
-    facilityScore = 0
-    details.push('등록된 커뮤니티 시설 없음')
+  } else {
+    // 빈 배열은 "시설이 없다"가 아니라 "입력하지 않았다"로 본다.
+    // 0점 처리하면 미입력 단지가 부당하게 낮은 점수를 받는다.
+    details.push('커뮤니티 시설 미입력 — 단지 수정 화면에서 체크하면 반영됩니다')
   }
 
   // (b) 관리비

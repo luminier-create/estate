@@ -177,7 +177,7 @@ describe('rankResults', () => {
     const mk = (totalScore: number, confidence: number) =>
       ({ score: { totalScore, confidence } }) as never
     const ranked = rankResults([mk(80, 0.6), mk(80, 0.95)])
-    expect((ranked[0] as { score: { confidence: number } }).score.confidence).toBe(0.95)
+    expect((ranked[0]! as { score: { confidence: number } }).score.confidence).toBe(0.95)
   })
 })
 

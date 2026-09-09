@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-fg: #111827;
+  --color-muted: #6b7280;
+  --color-subtle: #9ca3af;
+
+  --color-brand: #1f6feb;
+  --color-brand-dark: #1a5fd0;
+  --color-brand-soft: #e8f0fe;
+
+  --color-grade-s: #0d9488;
+  --color-grade-a: #2563eb;
+  --color-grade-b: #7c3aed;
+  --color-grade-c: #d97706;
+  --color-grade-d: #dc2626;
+  --color-grade-e: #6b7280;
+
+  --color-positive: #059669;
+  --color-negative: #dc2626;
+
+  --radius-card: 14px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-bg: #0d1117;
+    --color-surface: #161b22;
+    --color-border: #262d36;
+    --color-fg: #e6edf3;
+    --color-muted: #9aa6b2;
+    --color-subtle: #6e7781;
+    --color-brand-soft: #16243c;
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family:
+    'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-feature-settings: 'tnum';
+  overscroll-behavior-y: none;
+}
+
+/* 모바일 하단 탭바가 콘텐츠를 가리지 않도록 */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+}
+
+@media (min-width: 768px) {
+  .pb-safe {
+    padding-bottom: 2rem;
+  }
+}
+
+/* 터치 타깃 최소 44px 보장 */
+button,
+a[role='button'] {
+  touch-action: manipulation;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}

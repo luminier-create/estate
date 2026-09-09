@@ -144,3 +144,33 @@ export function weakestAxes(result: ScoreResult, limit = 3): AxisResult[] {
     .slice(0, limit)
     .map((x) => x.axis)
 }
+
+/**
+ * 이미 산출된 축 점수를 다른 가중치로 재집계한다.
+ * 비교 화면의 가중치 슬라이더가 외부 API 재호출 없이 즉시 반응하도록 하기 위한 함수다.
+ * 축 점수 자체는 가중치와 무관하므로 이 재계산은 정확하다.
+ */
+export function recomputeWithWeights(
+  axes: readonly AxisResult[],
+  weights: Record<string, number>,
+  riskPenalty: number,
+): { totalScore: number; grade: Grade; baseScore: number; confidence: number } {
+  const available = axes.filter(
+    (a): a is AxisResult & { score: number } => a.score !== null,
+  )
+  const totalWeight = available.reduce((s, a) => s + (weights[a.axis] ?? 0), 0)
+  const baseScore =
+    totalWeight > 0
+      ? available.reduce((s, a) => s + a.score * (weights[a.axis] ?? 0), 0) /
+        totalWeight
+      : 0
+  const declared = axes.reduce((s, a) => s + (weights[a.axis] ?? 0), 0)
+  const totalScore = Math.min(100, Math.max(0, baseScore - riskPenalty))
+
+  return {
+    totalScore: round1(totalScore),
+    grade: toGrade(totalScore),
+    baseScore: round1(baseScore),
+    confidence: declared > 0 ? Math.round((totalWeight / declared) * 100) / 100 : 0,
+  }
+}

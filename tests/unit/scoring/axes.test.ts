@@ -318,6 +318,14 @@ describe('AMENITY', () => {
     expect(r.score!).toBeGreaterThan(85)
   })
 
+  it('시설 미입력(빈 배열)은 0점이 아니라 관리비만으로 평가한다', () => {
+    const r = scoreAmenity(
+      makeInput({ property: makeProperty({ communityFacilities: [], monthlyFeePerM2: 2000 }) }),
+    )
+    expect(r.score).not.toBeNull()
+    expect(r.score!).toBeGreaterThan(50)
+  })
+
   it('시설·관리비 정보가 모두 없으면 결측', () => {
     const r = scoreAmenity(
       makeInput({

@@ -13,3 +13,5 @@ next-env.d.ts
 *.tsbuildinfo
 .firebase/
 firebase-debug.log
+test-results/
+playwright-report/

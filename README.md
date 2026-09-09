@@ -42,13 +42,51 @@ Firebase Authentication (Google) · Cloud Firestore · Firebase App Hosting
 
 ```bash
 npm install
-cp .env.example .env.local     # 키 없이도 Mock 데이터로 전체 동작
+cp .env.example .env.local     # 키 없이도 시드 데이터로 전체 동작
 npm run dev
 ```
 
-외부 API 키는 선택이다. 키가 없으면 Provider가 자동으로 Mock 구현으로 폴백하며,
-`.env.local` 에 키를 넣는 순간 실데이터로 전환된다. 키 발급 절차는
-[03-DATA-SOURCES](docs/03-DATA-SOURCES.md) §8 체크리스트를 따른다.
+외부 API 키는 선택이다. 키가 없으면 Provider가 자동으로 Mock 구현으로 폴백하고,
+Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" 버튼이 나타나 전체 흐름을
+그대로 시연할 수 있다. `.env.local` 에 키를 넣는 순간 실데이터·실로그인으로 전환된다.
+키 발급 절차는 [03-DATA-SOURCES](docs/03-DATA-SOURCES.md) §8 체크리스트를 따른다.
+
+> 데모 모드의 데이터는 서버 프로세스 메모리에만 저장되며 재시작 시 사라진다.
+> Firebase Admin 환경변수가 설정되면 이 경로는 자동으로 닫히고 Firestore를 쓴다.
+
+## 명령어
+
+| 명령 | 설명 |
+|---|---|
+| `npm run dev` | 개발 서버 |
+| `npm run build` | 프로덕션 빌드 |
+| `npm run typecheck` | TypeScript strict 검사 |
+| `npm run lint` | ESLint |
+| `npm test` | 스코어링 엔진 단위 테스트 (84건) |
+| `npm run test:e2e` | Playwright E2E (로그인→온보딩→등록→분석→비교) |
+
+## 배포 (Firebase App Hosting)
+
+```bash
+firebase init apphosting          # 저장소 연결
+firebase apphosting:secrets:set KAKAO_REST_API_KEY   # 키마다 반복
+firebase deploy --only firestore  # 보안 규칙·인덱스
+```
+
+`apphosting.yaml` 이 시크릿 참조와 런타임 설정을 담고 있다. 서버 전용 키는
+`availability: [RUNTIME]` 로 지정해 빌드 산출물에 포함되지 않게 했다.
+
+## 설계상의 주요 결정
+
+- **결측 내성** — 외부 API가 하나 실패해도 해당 축만 가중치째 제외하고 나머지를
+  재정규화한다. 총점은 항상 0~100이며, 별도의 신뢰도(%)를 함께 표기한다.
+- **Provider 추상화** — 스코어링 로직(`lib/scoring`)은 외부 의존이 전혀 없는 순수
+  함수다. 데이터 수집은 인터페이스 뒤에 있어 실/모의 구현을 교체할 수 있다.
+- **점수는 서버에서만 기록** — Firestore 규칙에서 분석 문서의 클라이언트 쓰기를
+  막아 점수 위조를 차단한다.
+- **알고리즘 버전 관리** — 스코어링 로직이 바뀌면 `ALGORITHM_VERSION` 이 올라가고
+  기존 분석 캐시가 자동 무효화된다.
+- **크롤링 배제** — 공식 Open API만 사용한다. 부동산 앱 스크래핑은 하지 않는다.
 
 ## 면책
 
