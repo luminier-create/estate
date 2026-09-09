@@ -113,6 +113,18 @@ pkill -f "nex[t]-server"; rm -rf .next && npm run test:e2e
 데모 로그인은 쿠키를 받은 뒤 이동한다. 이동을 기다리지 않고 다음 요청을 보내면
 쿠키 없이 랜딩에 머문다. `waitForURL` 로 이동을 기다린다.
 
+### 이 컨테이너에서 E2E 는 `PLAYWRIGHT_CHROMIUM_PATH` 를 줘야 돈다
+
+기본 경로 탐색은 `chromium_headless_shell-<빌드번호>` 를 찾는데, 미리 깔린 것은
+`/opt/pw-browsers/chromium` (다른 빌드번호)이다. 그냥 돌리면 8건 전부
+"Executable doesn't exist" 로 실패한다. 브라우저를 다시 받지 말고 경로를 준다.
+
+```bash
+PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:e2e
+```
+
+CI 는 `playwright install` 로 직접 받으므로 이 변수가 필요 없다.
+
 ### Zod 의 `z.number()` 는 Infinity 를 통과시킨다
 
 NaN 은 막지만 `Infinity` 는 통과한다. 좌표·비율처럼 계산에 들어가는 값에는
