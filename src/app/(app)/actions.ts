@@ -185,6 +185,22 @@ export async function savePropertyAction(input: PropertyFormInput) {
   return { ok: true as const, id }
 }
 
+/**
+ * 후보에서 빼되 기록은 남긴다.
+ * 삭제는 되돌릴 수 없어서, 고민 중인 단지를 치우는 용도로는 과하다.
+ */
+export async function setPropertyStatusAction(
+  id: string,
+  status: 'ACTIVE' | 'ARCHIVED',
+) {
+  const user = await requireUser()
+  await updateProperty(user.uid, id, { status })
+  revalidatePath('/dashboard')
+  revalidatePath('/compare')
+  revalidatePath(`/properties/${id}`)
+  return { ok: true as const }
+}
+
 export async function deletePropertyAction(id: string) {
   const user = await requireUser()
   await deleteProperty(user.uid, id)

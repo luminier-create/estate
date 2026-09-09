@@ -80,7 +80,23 @@ test('전체 흐름: 로그인 → 온보딩 → 단지 등록 → 분석 → �
   // 결측이던 커뮤니티·관리비 축이 점수를 갖는다
   await expect(page.getByText('커뮤니티 시설 미입력')).toHaveCount(0)
 
-  // 8. 비교 화면 — 프리셋 전환이 즉시 반영되는지
+  // 8. 보류함 — 후보에서 빼면 순위에서 사라지고, 되돌리면 복귀한다
+  await page.getByRole('button', { name: '보류함으로 이동' }).click()
+  await expect(page.getByRole('button', { name: '후보로 되돌리기' })).toBeVisible()
+
+  await page.goto('/dashboard')
+  // 순위 카드에서는 빠지고, 접혀 있는 보류함 안에만 남는다
+  const summary = page.locator('summary').filter({ hasText: '보류함' })
+  await expect(summary).toBeVisible()
+  await summary.click()
+  await expect(page.getByText(`래미안 도곡카운티 ${stamp}`)).toBeVisible()
+
+  await page.getByText(`래미안 도곡카운티 ${stamp}`).click()
+  await page.waitForURL(/\/properties\/p_/)
+  await page.getByRole('button', { name: '후보로 되돌리기' }).click()
+  await expect(page.getByRole('button', { name: '보류함으로 이동' })).toBeVisible()
+
+  // 9. 비교 화면 — 프리셋 전환이 즉시 반영되는지
   await page.goto('/compare')
   await expect(page.getByRole('table')).toBeVisible()
   await page.getByRole('button', { name: '직주근접' }).click()

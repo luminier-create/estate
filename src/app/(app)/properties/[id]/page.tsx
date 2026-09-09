@@ -6,6 +6,7 @@ import { AxisRadar } from '@/components/score/AxisRadar'
 import { ScoreBadge } from '@/components/score/ScoreBadge'
 import { AnalyzeButton } from '@/components/property/AnalyzeButton'
 import { DeletePropertyButton } from '@/components/property/DeletePropertyButton'
+import { ArchiveButton } from '@/components/property/ArchiveButton'
 import { DevelopmentForm } from '@/components/property/DevelopmentForm'
 import { PropertyMap } from '@/components/map/PropertyMap'
 import { requireUserOrRedirect } from '@/lib/firebase/session'
@@ -59,7 +60,10 @@ export default async function PropertyDetailPage({
         <Link href="/dashboard" className="text-sm text-[var(--color-muted)]">
           ← 내 후보
         </Link>
-        <h1 className="mt-2 text-xl font-bold sm:text-2xl">{property.name}</h1>
+        <h1 className="mt-2 flex flex-wrap items-center gap-2 text-xl font-bold sm:text-2xl">
+          {property.name}
+          {property.status === 'ARCHIVED' && <Badge tone="warn">보류함</Badge>}
+        </h1>
         <p className="mt-1 text-sm text-[var(--color-muted)]">{property.address}</p>
       </header>
 
@@ -242,6 +246,10 @@ export default async function PropertyDetailPage({
             다른 단지와 비교
           </Button>
         </Link>
+        <ArchiveButton
+          propertyId={property.id}
+          archived={property.status === 'ARCHIVED'}
+        />
         <DeletePropertyButton propertyId={property.id} name={property.name} />
       </div>
 

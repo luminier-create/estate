@@ -8,10 +8,12 @@ import {
   analysisId,
   getAnalysis,
   getProfile,
+  listArchivedProperties,
   listProperties,
   profileHash,
 } from '@/lib/repo'
 import { getPreset } from '@/lib/scoring/presets'
+import { formatManwon } from '@/lib/scoring/normalize'
 
 export default async function DashboardPage() {
   const user = await requireUserOrRedirect()
@@ -19,7 +21,10 @@ export default async function DashboardPage() {
   if (!profile) redirect('/')
   if (!profile.onboardingCompleted) redirect('/onboarding')
 
-  const properties = await listProperties(user.uid)
+  const [properties, archived] = await Promise.all([
+    listProperties(user.uid),
+    listArchivedProperties(user.uid),
+  ])
   const hash = profileHash(profile)
   const presetId = profile.weights.presetId
 
@@ -103,6 +108,35 @@ export default async function DashboardPage() {
           단지가 하나뿐이면 점수의 절대값보다 축별 강약점을 보는 편이 유용합니다.
           비교 대상을 2개 이상 등록하면 순위와 상대 평가가 의미를 갖습니다.
         </Card>
+      )}
+
+      {archived.length > 0 && (
+        <details className="rounded-[--radius-card] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 sm:px-5">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-medium">
+            보류함
+            <span className="text-xs text-[var(--color-muted)]">
+              {archived.length}개
+            </span>
+          </summary>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            순위 계산과 비교에서 제외된 단지입니다. 상세 화면에서 되돌릴 수 있습니다.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {archived.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/properties/${p.id}`}
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 text-sm transition-colors hover:border-[var(--color-brand)]"
+                >
+                  <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-[var(--color-muted)]">
+                    {formatManwon(p.priceManwon)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <Disclaimer />

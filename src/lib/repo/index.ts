@@ -80,6 +80,16 @@ export async function listProperties(uid: string): Promise<StoredProperty[]> {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
+/** 보류함으로 옮긴 단지. 순위 계산과 비교에서 빠진다. */
+export async function listArchivedProperties(
+  uid: string,
+): Promise<StoredProperty[]> {
+  const all = await store().list<StoredProperty>(propsPath(uid))
+  return all
+    .filter((p) => p.status === 'ARCHIVED')
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
 export async function getProperty(
   uid: string,
   id: string,
