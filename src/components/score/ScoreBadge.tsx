@@ -2,13 +2,17 @@ import { cn } from '@/lib/utils'
 import { gradeLabel } from '@/lib/scoring/aggregate'
 import type { Grade } from '@/lib/scoring/types'
 
+/**
+ * 흰 텍스트를 얹으므로 700 계열로 통일한다.
+ * 600 계열은 teal 3.74:1, amber 3.18:1 로 WCAG AA(4.5:1)에 미달했다.
+ */
 const GRADE_COLOR: Record<Grade, string> = {
-  S: 'bg-teal-600',
-  A: 'bg-blue-600',
-  B: 'bg-violet-600',
-  C: 'bg-amber-600',
-  D: 'bg-red-600',
-  E: 'bg-gray-500',
+  S: 'bg-teal-700',
+  A: 'bg-blue-700',
+  B: 'bg-violet-700',
+  C: 'bg-amber-700',
+  D: 'bg-red-700',
+  E: 'bg-gray-600',
 }
 
 export function ScoreBadge({
@@ -35,7 +39,7 @@ export function ScoreBadge({
         )}
       >
         {Math.round(score)}
-        <span className="text-[10px] font-semibold opacity-90">{grade}등급</span>
+        <span className="text-[10px] font-semibold">{grade}등급</span>
       </div>
       {size === 'lg' && (
         <span className="text-xs font-medium text-[var(--color-muted)]">

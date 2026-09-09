@@ -22,7 +22,7 @@ export function AppShell({
     <div className="min-h-dvh md:flex">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:flex md:flex-col">
-        <Link href="/dashboard" className="text-lg font-bold text-[var(--color-brand)]">
+        <Link href="/dashboard" className="text-lg font-bold text-[var(--color-brand-text)]">
           HomeFit
         </Link>
         <nav className="mt-8 flex flex-col gap-1">
@@ -32,7 +32,7 @@ export function AppShell({
               href={item.href}
               className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-brand-soft)]"
             >
-              <span aria-hidden className="w-4 text-center text-[var(--color-brand)]">
+              <span aria-hidden className="w-4 text-center text-[var(--color-brand-text)]">
                 {item.icon}
               </span>
               {item.label}
@@ -51,7 +51,7 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* 모바일 상단바 */}
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 px-5 backdrop-blur md:hidden">
-          <Link href="/dashboard" className="font-bold text-[var(--color-brand)]">
+          <Link href="/dashboard" className="font-bold text-[var(--color-brand-text)]">
             HomeFit
           </Link>
           <SignOutButton compact />
@@ -75,7 +75,7 @@ export function AppShell({
               href={item.href}
               className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-[var(--color-muted)]"
             >
-              <span aria-hidden className="text-base text-[var(--color-brand)]">
+              <span aria-hidden className="text-base text-[var(--color-brand-text)]">
                 {item.icon}
               </span>
               {item.label}

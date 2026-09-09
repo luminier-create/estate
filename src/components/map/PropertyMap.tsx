@@ -169,10 +169,10 @@ export function PropertyMap({
               center,
               radius: metersForWalkMinutes(minutes),
               strokeWeight: 1,
-              strokeColor: '#1f6feb',
+              strokeColor: '#1a5fd0',
               strokeOpacity: 0.6,
               strokeStyle: 'shortdash',
-              fillColor: '#1f6feb',
+              fillColor: '#1a5fd0',
               fillOpacity: 0.06,
             })
             circle.setMap(map)
@@ -205,7 +205,7 @@ export function PropertyMap({
           href={externalUrl}
           target="_blank"
           rel="noreferrer noopener"
-          className="mt-2 inline-block text-xs text-[var(--color-brand)] underline"
+          className="mt-2 inline-block text-xs text-[var(--color-brand-text)] underline"
         >
           카카오맵에서 위치 보기
         </a>

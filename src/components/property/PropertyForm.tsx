@@ -309,7 +309,7 @@ export function PropertyForm({
                     onClick={() => toggle(facilities, f, setFacilities)}
                     className={`min-h-11 rounded-full border px-3.5 text-sm transition-colors ${
                       facilities.includes(f)
-                        ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] font-medium text-[var(--color-brand)]'
+                        ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] font-medium text-[var(--color-brand-text)]'
                         : 'border-[var(--color-border)] text-[var(--color-muted)]'
                     }`}
                   >
@@ -357,7 +357,7 @@ export function PropertyForm({
         )}
       </Card>
 
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
       <Button onClick={submit} disabled={saving} className="w-full">
         {saving ? '분석 중… (최대 10초)' : initial ? '수정하고 재분석' : '등록하고 분석하기'}

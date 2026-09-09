@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="HomeFit">
-  <rect width="64" height="64" rx="14" fill="#1f6feb"/>
+  <rect width="64" height="64" rx="14" fill="#1a5fd0"/>
   <path d="M16 30 32 17l16 13v17a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V30Z" fill="#fff" opacity=".95"/>
-  <path d="M27 47V36h10v11" fill="#1f6feb"/>
+  <path d="M27 47V36h10v11" fill="#1a5fd0"/>
 </svg>

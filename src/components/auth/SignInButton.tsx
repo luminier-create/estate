@@ -65,7 +65,7 @@ export function SignInButton({ configured }: { configured: boolean }) {
       )}
 
       {error && (
-        <p className="rounded-lg bg-red-50 p-3 text-center text-sm text-red-700">
+        <p className="rounded-lg bg-red-50 p-3 text-center text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
         </p>
       )}

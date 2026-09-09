@@ -63,7 +63,7 @@ Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" �
 | `npm run typecheck` | TypeScript strict 검사 |
 | `npm run lint` | ESLint |
 | `npm test` | 스코어링 엔진 단위 테스트 (84건) |
-| `npm run test:e2e` | Playwright E2E (로그인→온보딩→등록→분석→비교) |
+| `npm run test:e2e` | Playwright E2E (전 흐름 + 접근성 감사) |
 
 E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저는 Playwright가 설치한 것을
 자동으로 찾으며, 다른 위치의 Chromium을 쓰려면 `PLAYWRIGHT_CHROMIUM_PATH` 로 지정한다.
@@ -74,7 +74,8 @@ E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저�
 `.github/workflows/ci.yml` 이 PR마다 두 잡을 돌린다.
 
 - **verify** — 타입 검사 → 린트 → 단위 테스트 → 프로덕션 빌드
-- **e2e** — Chromium 설치 후 전 흐름 검증, 실패 시 리포트를 아티팩트로 업로드
+- **e2e** — Chromium 설치 후 전 흐름 검증 + axe-core 접근성 감사(WCAG 2.1 AA,
+  라이트·다크 양쪽), 실패 시 리포트를 아티팩트로 업로드
 
 외부 API 키나 Firebase 설정 없이 통과한다. Provider가 시드 데이터로 폴백하고
 인증은 데모 모드를 쓰기 때문이다.
@@ -101,6 +102,9 @@ firebase deploy --only firestore  # 보안 규칙·인덱스
 - **알고리즘 버전 관리** — 스코어링 로직이 바뀌면 `ALGORITHM_VERSION` 이 올라가고
   기존 분석 캐시가 자동 무효화된다.
 - **크롤링 배제** — 공식 Open API만 사용한다. 부동산 앱 스크래핑은 하지 않는다.
+- **색 토큰 분리** — 브랜드색을 배경용(`--color-brand`)과 텍스트용
+  (`--color-brand-text`)으로 나눈다. 하나로 합치면 밝은 배경 위 작은 글자에서
+  WCAG AA(4.5:1)를 만족시킬 수 없다. 다크 모드에서는 텍스트용을 밝게 뒤집는다.
 
 ## 면책
 

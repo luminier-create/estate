@@ -27,7 +27,8 @@ const BUTTON_STYLES: Record<ButtonVariant, string> = {
   secondary:
     'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] hover:bg-[var(--color-brand-soft)]',
   ghost: 'text-[var(--color-muted)] hover:bg-[var(--color-brand-soft)]',
-  danger: 'border border-[var(--color-negative)] text-[var(--color-negative)] hover:bg-red-50',
+  danger:
+    'border border-[var(--color-negative)] text-[var(--color-negative)] hover:bg-red-50 dark:hover:bg-red-950',
 }
 
 export function Button({
@@ -113,12 +114,15 @@ export function Badge({
   children: ReactNode
   className?: string
 }) {
+  // 다크 모드에서 밝은 배지가 흰 덩어리로 튀지 않도록 톤을 뒤집는다
   const tones = {
     neutral: 'bg-[var(--color-bg)] text-[var(--color-muted)] border-[var(--color-border)]',
-    brand: 'bg-[var(--color-brand-soft)] text-[var(--color-brand)] border-transparent',
-    positive: 'bg-emerald-50 text-emerald-700 border-transparent',
-    negative: 'bg-red-50 text-red-700 border-transparent',
-    warn: 'bg-amber-50 text-amber-700 border-transparent',
+    brand: 'bg-[var(--color-brand-soft)] text-[var(--color-brand-text)] border-transparent',
+    positive:
+      'bg-emerald-50 text-emerald-700 border-transparent dark:bg-emerald-950 dark:text-emerald-300',
+    negative:
+      'bg-red-50 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
+    warn: 'bg-amber-50 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
   }
   return (
     <span

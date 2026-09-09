@@ -116,7 +116,7 @@ export function OnboardingForm({
               className={`h-1 rounded-full ${i <= step ? 'bg-[var(--color-brand)]' : 'bg-[var(--color-border)]'}`}
             />
             <p
-              className={`mt-1.5 text-xs ${i === step ? 'font-semibold text-[var(--color-brand)]' : 'text-[var(--color-muted)]'}`}
+              className={`mt-1.5 text-xs ${i === step ? 'font-semibold text-[var(--color-brand-text)]' : 'text-[var(--color-muted)]'}`}
             >
               {i + 1}. {s}
             </p>
@@ -313,7 +313,7 @@ export function OnboardingForm({
       )}
 
       {error && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
       )}
 
       <div className="flex gap-3">

@@ -90,7 +90,7 @@ export function CompareTable({
               aria-pressed={presetId === p.id}
               className={`min-h-11 rounded-full border px-3.5 text-sm transition-colors ${
                 presetId === p.id
-                  ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] font-medium text-[var(--color-brand)]'
+                  ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] font-medium text-[var(--color-brand-text)]'
                   : 'border-[var(--color-border)] text-[var(--color-muted)]'
               }`}
             >
@@ -215,7 +215,7 @@ export function CompareTable({
                         key={ranked[i]!.row.id}
                         className={`p-3 text-center tabular-nums ${
                           s !== null && s === best
-                            ? 'font-bold text-[var(--color-brand)]'
+                            ? 'font-bold text-[var(--color-brand-text)]'
                             : 'text-[var(--color-fg)]'
                         }`}
                       >

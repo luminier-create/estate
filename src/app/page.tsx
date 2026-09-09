@@ -24,12 +24,12 @@ export default async function LandingPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col px-5 py-10 sm:px-8 lg:py-16">
       <header className="mb-10">
-        <p className="text-sm font-semibold tracking-wide text-[var(--color-brand)]">
+        <p className="text-sm font-semibold tracking-wide text-[var(--color-brand-text)]">
           HomeFit
         </p>
         <h1 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
           이 아파트가
-          <br className="sm:hidden" /> <span className="text-[var(--color-brand)]">나에게</span>{' '}
+          <br className="sm:hidden" /> <span className="text-[var(--color-brand-text)]">나에게</span>{' '}
           좋은 집인가
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--color-muted)]">
@@ -51,7 +51,7 @@ export default async function LandingPage() {
                   key={axis.label}
                   className="flex items-center gap-3 px-4 py-3 sm:px-5"
                 >
-                  <span className="w-8 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--color-brand)]">
+                  <span className="w-8 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--color-brand-text)]">
                     {axis.weight}
                   </span>
                   <span className="min-w-0 flex-1">

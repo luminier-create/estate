@@ -55,8 +55,8 @@ test('전체 흐름: 로그인 → 온보딩 → 단지 등록 → 분석 → �
 
   // 6. 대시보드 — 순위가 매겨지고 방금 등록한 두 건이 보인다
   await page.goto('/dashboard')
-  await expect(page.getByText('1위')).toBeVisible()
-  await expect(page.getByText('2위')).toBeVisible()
+  await expect(page.getByText('1위', { exact: true })).toBeVisible()
+  await expect(page.getByText('2위', { exact: true })).toBeVisible()
   await expect(page.getByText(`래미안 도곡카운티 ${stamp}`)).toBeVisible()
   await expect(page.getByText(`상계주공 7단지 ${stamp}`)).toBeVisible()
 

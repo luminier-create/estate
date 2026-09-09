@@ -8,8 +8,15 @@
   --color-muted: #6b7280;
   --color-subtle: #9ca3af;
 
-  --color-brand: #1f6feb;
-  --color-brand-dark: #1a5fd0;
+  /*
+   * 브랜드색은 용도에 따라 분리한다.
+   * - brand      : 배경·보더용. 흰 텍스트를 얹었을 때 4.5:1 이상이어야 한다.
+   * - brand-text : 텍스트·아이콘용. 밝은 배경 위에서 4.5:1 이상이어야 한다.
+   * 하나로 합치면 밝은 배경 위 작은 글자에서 WCAG AA 를 만족시킬 수 없다.
+   */
+  --color-brand: #1a5fd0;
+  --color-brand-text: #17539c;
+  --color-brand-dark: #14498f;
   --color-brand-soft: #e8f0fe;
 
   --color-grade-s: #0d9488;
@@ -39,6 +46,13 @@
     --color-muted: #9aa6b2;
     --color-subtle: #6e7781;
     --color-brand-soft: #16243c;
+    /* 어두운 배경에서는 텍스트용 브랜드색을 밝게 뒤집는다 */
+    --color-brand: #2f6fdc;
+    --color-brand-text: #7db3ff;
+    --color-brand-dark: #3f7ee8;
+    /* 상태색도 어두운 배경에서 4.5:1 을 넘도록 밝게 뒤집는다 */
+    --color-positive: #3fb950;
+    --color-negative: #ff7b72;
   }
 }
 

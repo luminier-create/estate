@@ -204,7 +204,7 @@ export default async function PropertyDetailPage({
                     href={d.sourceUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="mt-1 inline-block text-xs text-[var(--color-brand)] underline"
+                    className="mt-1 inline-block text-xs text-[var(--color-brand-text)] underline"
                   >
                     출처 확인
                   </a>
