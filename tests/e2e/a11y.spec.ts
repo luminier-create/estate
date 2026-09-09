@@ -8,7 +8,21 @@ import { expect, test, type Page } from '@playwright/test'
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 async function audit(page: Page, label: string) {
-  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze()
+  await page.waitForLoadState('domcontentloaded')
+
+  // 개발 서버가 해당 라우트를 처음 컴파일하는 중이면 axe 주입 자체가 실패할 수 있다.
+  // 접근성 문제가 아니라 준비 상태 문제이므로 한 번만 다시 시도한다.
+  let violations
+  for (let attempt = 0; ; attempt++) {
+    try {
+      ;({ violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze())
+      break
+    } catch (e) {
+      if (attempt >= 1) throw e
+      await page.waitForTimeout(2000)
+      await page.reload({ waitUntil: 'domcontentloaded' })
+    }
+  }
 
   const summary = violations.map((v) => ({
     id: v.id,
