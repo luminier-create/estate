@@ -65,6 +65,20 @@ Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" �
 | `npm test` | 스코어링 엔진 단위 테스트 (84건) |
 | `npm run test:e2e` | Playwright E2E (로그인→온보딩→등록→분석→비교) |
 
+E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저는 Playwright가 설치한 것을
+자동으로 찾으며, 다른 위치의 Chromium을 쓰려면 `PLAYWRIGHT_CHROMIUM_PATH` 로 지정한다.
+같은 서버에 반복 실행해도 통과하도록 작성되어 있다.
+
+## CI
+
+`.github/workflows/ci.yml` 이 PR마다 두 잡을 돌린다.
+
+- **verify** — 타입 검사 → 린트 → 단위 테스트 → 프로덕션 빌드
+- **e2e** — Chromium 설치 후 전 흐름 검증, 실패 시 리포트를 아티팩트로 업로드
+
+외부 API 키나 Firebase 설정 없이 통과한다. Provider가 시드 데이터로 폴백하고
+인증은 데모 모드를 쓰기 때문이다.
+
 ## 배포 (Firebase App Hosting)
 
 ```bash

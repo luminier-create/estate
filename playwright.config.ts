@@ -11,7 +11,10 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3100',
     trace: 'off',
     locale: 'ko-KR',
-    launchOptions: { executablePath: '/opt/pw-browsers/chromium' },
+    // 브라우저 경로는 환경에 따라 다르다. 지정이 없으면 Playwright 가 설치한 것을 쓴다.
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+      : {},
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
