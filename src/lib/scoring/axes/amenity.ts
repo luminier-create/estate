@@ -100,7 +100,7 @@ export function scoreAmenity(ctx: AxisContext): AxisResult {
     return missing(
       'AMENITY',
       weight,
-      '커뮤니티 시설과 관리비 정보가 모두 없습니다. 단지 등록 화면에서 입력하면 평가됩니다.',
+      '커뮤니티 시설과 관리비 정보가 모두 없습니다. 단지 수정 화면에서 입력하면 평가됩니다.',
     )
   }
 

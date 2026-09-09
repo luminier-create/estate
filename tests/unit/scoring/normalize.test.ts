@@ -11,6 +11,7 @@ import {
   quantile,
   removeOutliers,
   walkMinutes,
+  metersForWalkMinutes,
 } from '@/lib/scoring/normalize'
 
 describe('piecewise', () => {
@@ -63,6 +64,16 @@ describe('walkMinutes', () => {
   })
   it('거리가 늘면 시간도 단조 증가', () => {
     expect(walkMinutes(1000)).toBeGreaterThan(walkMinutes(500))
+  })
+
+  it('metersForWalkMinutes 는 walkMinutes 의 역함수 — 지도 반경과 점수 기준이 어긋나면 안 된다', () => {
+    for (const m of [3, 5, 10, 15, 20]) {
+      expect(walkMinutes(metersForWalkMinutes(m))).toBeCloseTo(m, 8)
+    }
+  })
+
+  it('도보 10분은 직선 약 536m', () => {
+    expect(metersForWalkMinutes(10)).toBeCloseTo(536, 0)
   })
 })
 

@@ -55,7 +55,27 @@ test('전체 흐름: 로그인 → 온보딩 → 단지 등록 → 분석 → �
   await expect(page.getByText(`래미안 도곡카운티 ${stamp}`)).toBeVisible()
   await expect(page.getByText(`상계주공 7단지 ${stamp}`)).toBeVisible()
 
-  // 7. 비교 화면 — 프리셋 전환이 즉시 반영되는지
+  // 7. 단지 수정 — 추가 정보를 채우면 결측 축이 줄어든다
+  await page.goto('/dashboard')
+  await page.getByText(`래미안 도곡카운티 ${stamp}`).click()
+  await page.waitForURL(/\/properties\/p_/)
+  await expect(
+    page.getByText('커뮤니티·관리비').locator('xpath=..').getByText('데이터 없음'),
+  ).toBeVisible()
+
+  await page.getByRole('link', { name: '정보 수정' }).click()
+  await page.waitForURL(/\/edit$/)
+  await page.getByRole('button', { name: /추가 정보/ }).click()
+  await page.getByLabel('총 세대수').fill('1200')
+  await page.getByLabel('㎡당 월 관리비 (원)').fill('2200')
+  await page.getByRole('button', { name: '피트니스센터' }).click()
+  await page.getByRole('button', { name: /수정하고 재분석/ }).click()
+  await page.waitForURL(/\/properties\/p_[^/]*$/, { timeout: 45_000 })
+
+  // 결측이던 커뮤니티·관리비 축이 점수를 갖는다
+  await expect(page.getByText('커뮤니티 시설 미입력')).toHaveCount(0)
+
+  // 8. 비교 화면 — 프리셋 전환이 즉시 반영되는지
   await page.goto('/compare')
   await expect(page.getByRole('table')).toBeVisible()
   await page.getByRole('button', { name: '직주근접' }).click()

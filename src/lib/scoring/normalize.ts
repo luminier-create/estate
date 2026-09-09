@@ -60,6 +60,14 @@ export function walkMinutes(straightLineM: number): number {
   return (straightLineM * DETOUR_FACTOR) / WALK_SPEED_M_PER_MIN
 }
 
+/**
+ * 도보 소요시간(분) → 직선거리(m). walkMinutes 의 역함수.
+ * 지도에 "도보 N분 반경"을 그릴 때 쓴다.
+ */
+export function metersForWalkMinutes(minutes: number): number {
+  return (minutes * WALK_SPEED_M_PER_MIN) / DETOUR_FACTOR
+}
+
 /** 두 좌표 간 하버사인 거리(m) */
 export function haversineM(
   a: { lat: number; lng: number },

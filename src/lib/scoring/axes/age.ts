@@ -36,7 +36,7 @@ export function scoreAge(ctx: AxisContext): AxisResult {
     return missing(
       'AGE',
       weight,
-      '건축년도 정보가 없습니다. 단지 등록 화면에서 입력하면 평가됩니다.',
+      '건축년도 정보가 없습니다. 단지 수정 화면에서 입력하면 평가됩니다.',
     )
   }
 

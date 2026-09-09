@@ -7,6 +7,7 @@ import { ScoreBadge } from '@/components/score/ScoreBadge'
 import { AnalyzeButton } from '@/components/property/AnalyzeButton'
 import { DeletePropertyButton } from '@/components/property/DeletePropertyButton'
 import { DevelopmentForm } from '@/components/property/DevelopmentForm'
+import { PropertyMap } from '@/components/map/PropertyMap'
 import { requireUserOrRedirect } from '@/lib/firebase/session'
 import {
   analysisId,
@@ -109,6 +110,16 @@ export default async function PropertyDetailPage({
         <Row label="건축년도" value={property.buildYear ? `${property.buildYear}년` : '미상'} />
         <Row label="세대수" value={property.totalHouseholds ? `${property.totalHouseholds.toLocaleString('ko-KR')}세대` : '미상'} />
         <Row label="세대당 주차" value={property.parkingPerHousehold ? `${property.parkingPerHousehold}대` : '미상'} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold">위치</h2>
+        <PropertyMap
+          name={property.name}
+          address={property.address}
+          lat={property.lat}
+          lng={property.lng}
+        />
       </Card>
 
       {analysis && (
@@ -219,7 +230,12 @@ export default async function PropertyDetailPage({
         </Card>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
+        <Link href={`/properties/${property.id}/edit`} className="flex-1">
+          <Button variant="secondary" className="w-full">
+            정보 수정
+          </Button>
+        </Link>
         <Link href="/compare" className="flex-1">
           <Button variant="secondary" className="w-full">
             다른 단지와 비교
