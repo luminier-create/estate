@@ -11,6 +11,10 @@ export type Breakpoint = readonly [input: number, score: number]
  *
  * 첫 지점보다 작으면 첫 점수, 마지막 지점보다 크면 마지막 점수로 고정(clamp)한다.
  *
+ * 입력이 NaN·Infinity 이면 NaN 을 돌려준다. 첫 점수로 대체하면 대부분의 곡선이
+ * 내림차순(작을수록 좋음)이라 계산 불능이 만점으로 둔갑한다 —
+ * 순위 앱에서 가장 나쁜 실패 방식이다. 호출부(ok())가 NaN 을 결측으로 강등한다.
+ *
  * @example piecewise(42, [[30,100],[60,55],[90,10]]) // → 82
  */
 export function piecewise(x: number, points: readonly Breakpoint[]): number {
@@ -20,7 +24,7 @@ export function piecewise(x: number, points: readonly Breakpoint[]): number {
   const first = points[0]!
   const last = points[points.length - 1]!
 
-  if (!Number.isFinite(x)) return first[1]
+  if (!Number.isFinite(x)) return Number.NaN
   if (x <= first[0]) return first[1]
   if (x >= last[0]) return last[1]
 

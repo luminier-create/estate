@@ -41,8 +41,12 @@ describe('piecewise', () => {
     expect(piecewise(60.01, curve)).toBeCloseTo(54.985, 2)
   })
 
-  it('NaN 은 첫 점수로 처리 — 총점이 오염되지 않아야 함', () => {
-    expect(piecewise(Number.NaN, curve)).toBe(100)
+  it('NaN·Infinity 는 NaN — 계산 불능이 만점으로 둔갑하면 안 됨', () => {
+    // curve 는 내림차순이라 첫 점수가 100점이다. 예전에는 NaN 이 100 으로 떨어져
+    // 통근시간을 산출하지 못한 단지가 만점을 받았다.
+    expect(piecewise(Number.NaN, curve)).toBeNaN()
+    expect(piecewise(Number.POSITIVE_INFINITY, curve)).toBeNaN()
+    expect(piecewise(Number.NEGATIVE_INFINITY, curve)).toBeNaN()
   })
 
   it('빈 구간은 오류', () => {

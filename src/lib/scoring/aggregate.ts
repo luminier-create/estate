@@ -32,6 +32,15 @@ const GRADE_TABLE: readonly { min: number; grade: Grade; label: string }[] = [
   { min: 0, grade: 'E', label: '부적합' },
 ]
 
+/**
+ * 총점 계산에 쓸 수 있는 축인지 판정한다.
+ * ok() 가 이미 NaN 을 결측으로 걸러내지만, 저장된 과거 분석 결과를 다시 집계할 때를
+ * 대비해 집계 단계에서도 유한성을 확인한다.
+ */
+function isScored(a: AxisResult): a is AxisResult & { score: number } {
+  return a.score !== null && Number.isFinite(a.score)
+}
+
 export function toGrade(score: number): Grade {
   return GRADE_TABLE.find((g) => score >= g.min)?.grade ?? 'E'
 }
@@ -72,9 +81,7 @@ export function computeScore(input: ScoringInput): ScoreResult {
     scoreAmenity(input),
   ]
 
-  const available = axes.filter(
-    (a): a is AxisResult & { score: number } => a.score !== null,
-  )
+  const available = axes.filter(isScored)
   const totalWeight = available.reduce((s, a) => s + a.weight, 0)
 
   const baseScore =
@@ -116,9 +123,7 @@ export function rankResults<T extends { score: ScoreResult }>(items: T[]): T[] {
 export function axisContributions(
   result: ScoreResult,
 ): { axis: string; contribution: number; score: number; weight: number }[] {
-  const available = result.axes.filter(
-    (a): a is AxisResult & { score: number } => a.score !== null,
-  )
+  const available = result.axes.filter(isScored)
   const totalWeight = available.reduce((s, a) => s + a.weight, 0)
   if (totalWeight === 0) return []
 
@@ -138,7 +143,7 @@ export function axisContributions(
  */
 export function weakestAxes(result: ScoreResult, limit = 3): AxisResult[] {
   return result.axes
-    .filter((a): a is AxisResult & { score: number } => a.score !== null)
+    .filter(isScored)
     .map((a) => ({ axis: a, loss: ((100 - a.score) * a.weight) / 100 }))
     .sort((x, y) => y.loss - x.loss)
     .slice(0, limit)
@@ -150,21 +155,25 @@ export function weakestAxes(result: ScoreResult, limit = 3): AxisResult[] {
  * 비교 화면의 가중치 슬라이더가 외부 API 재호출 없이 즉시 반응하도록 하기 위한 함수다.
  * 축 점수 자체는 가중치와 무관하므로 이 재계산은 정확하다.
  */
+/** 저장된 가중치가 손상돼도 집계가 NaN 으로 무너지지 않게 한다. */
+function weightOf(weights: Record<string, number>, axis: string): number {
+  const w = weights[axis]
+  return typeof w === 'number' && Number.isFinite(w) && w > 0 ? w : 0
+}
+
 export function recomputeWithWeights(
   axes: readonly AxisResult[],
   weights: Record<string, number>,
   riskPenalty: number,
 ): { totalScore: number; grade: Grade; baseScore: number; confidence: number } {
-  const available = axes.filter(
-    (a): a is AxisResult & { score: number } => a.score !== null,
-  )
-  const totalWeight = available.reduce((s, a) => s + (weights[a.axis] ?? 0), 0)
+  const available = axes.filter(isScored)
+  const totalWeight = available.reduce((s, a) => s + weightOf(weights, a.axis), 0)
   const baseScore =
     totalWeight > 0
-      ? available.reduce((s, a) => s + a.score * (weights[a.axis] ?? 0), 0) /
+      ? available.reduce((s, a) => s + a.score * weightOf(weights, a.axis), 0) /
         totalWeight
       : 0
-  const declared = axes.reduce((s, a) => s + (weights[a.axis] ?? 0), 0)
+  const declared = axes.reduce((s, a) => s + weightOf(weights, a.axis), 0)
   const totalScore = Math.min(100, Math.max(0, baseScore - riskPenalty))
 
   return {

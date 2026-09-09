@@ -3,6 +3,7 @@ import {
   axisContributions,
   computeScore,
   rankResults,
+  recomputeWithWeights,
   toGrade,
   weakestAxes,
 } from '@/lib/scoring/aggregate'
@@ -197,5 +198,57 @@ describe('axisContributions / weakestAxes', () => {
       }),
     )
     expect(weakestAxes(r, 1)[0]?.axis).toBe('COMMUTE')
+  })
+})
+
+describe('계산 불능 값의 결측 강등', () => {
+  const brokenRoute = (totalMinutes: number) => ({
+    totalMinutes,
+    transferCount: 1,
+    walkMeters: 500,
+    pathType: 3 as const,
+    summary: '손상된 경로',
+  })
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+  ])('통근시간이 %s 이면 COMMUTE 는 만점이 아니라 결측', (_label, minutes) => {
+    const r = computeScore(
+      makeInput({
+        observations: makeObservations({ officeRoute: brokenRoute(minutes) }),
+      }),
+    )
+    const commute = r.axes.find((a) => a.axis === 'COMMUTE')!
+    expect(commute.score).toBeNull()
+    // 결측이므로 가중치째 빠지고 신뢰도가 떨어져야 한다
+    expect(r.confidence).toBeLessThan(1)
+    expect(Number.isFinite(r.totalScore)).toBe(true)
+  })
+
+  it('결측 강등된 총점이 정상 단지보다 높지 않음', () => {
+    const healthy = computeScore(
+      makeInput({
+        observations: makeObservations({ officeRoute: brokenRoute(25) }),
+      }),
+    )
+    const broken = computeScore(
+      makeInput({
+        observations: makeObservations({ officeRoute: brokenRoute(Number.NaN) }),
+      }),
+    )
+    expect(broken.totalScore).toBeLessThanOrEqual(healthy.totalScore)
+  })
+
+  it('저장된 가중치가 손상돼도 재집계가 무너지지 않음', () => {
+    const r = computeScore(makeInput())
+    const broken = recomputeWithWeights(
+      r.axes,
+      Object.fromEntries(r.axes.map((a) => [a.axis, Number.POSITIVE_INFINITY])),
+      0,
+    )
+    expect(Number.isFinite(broken.totalScore)).toBe(true)
+    expect(broken.totalScore).toBe(0)
+    expect(broken.confidence).toBe(0)
   })
 })

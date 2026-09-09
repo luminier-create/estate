@@ -39,6 +39,11 @@ export function ok(params: {
   sources?: SourceRef[]
   confidence?: Confidence
 }): AxisResult {
+  // 계산 불능(NaN·Infinity)은 결측으로 강등한다. 그대로 두면 총점이 NaN 이 되거나
+  // clamp 를 거치며 그럴듯한 숫자로 위장된다 — 둘 다 순위를 조용히 망친다.
+  if (!Number.isFinite(params.score)) {
+    return missing(params.axis, params.weight, `${params.reason} (점수를 산출하지 못했습니다)`)
+  }
   return {
     axis: params.axis,
     score: round1(Math.min(100, Math.max(0, params.score))),
@@ -88,10 +93,13 @@ export const BUS_TRANSFER_TABLE = [100, 60, 25, 25] as const
 export function importanceWeightedAverage(
   entries: readonly { importance: number; score: number }[],
 ): number | null {
-  if (entries.length === 0) return null
-  const totalWeight = entries.reduce((s, e) => s + e.importance, 0)
+  const valid = entries.filter(
+    (e) => Number.isFinite(e.score) && Number.isFinite(e.importance),
+  )
+  if (valid.length === 0) return null
+  const totalWeight = valid.reduce((s, e) => s + e.importance, 0)
   if (totalWeight <= 0) return null
-  return entries.reduce((s, e) => s + e.score * e.importance, 0) / totalWeight
+  return valid.reduce((s, e) => s + e.score * e.importance, 0) / totalWeight
 }
 
 /**
@@ -101,8 +109,10 @@ export function importanceWeightedAverage(
 export function blend(
   parts: readonly { weight: number; score: number | null }[],
 ): number | null {
+  // NaN 서브스코어 하나가 축 전체를 오염시키지 않도록 null 과 함께 제외한다.
   const valid = parts.filter(
-    (p): p is { weight: number; score: number } => p.score !== null,
+    (p): p is { weight: number; score: number } =>
+      p.score !== null && Number.isFinite(p.score),
   )
   if (valid.length === 0) return null
   const totalWeight = valid.reduce((s, p) => s + p.weight, 0)

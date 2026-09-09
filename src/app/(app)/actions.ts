@@ -23,12 +23,19 @@ import { CACHE_POLICY, geocodeKey } from '@/lib/cache-keys'
 import { pyeongToM2 } from '@/lib/scoring/normalize'
 import { AXIS_CODES, RISK_CODES } from '@/lib/scoring/types'
 
+/**
+ * 좌표는 범위를 제한한다. z.number() 는 Infinity 를 통과시키고, 그 좌표가
+ * 거리 계산에 들어가면 NaN 이 되어 점수 산출이 불가능해진다.
+ */
+const latSchema = z.number().finite().min(-90).max(90)
+const lngSchema = z.number().finite().min(-180).max(180)
+
 const placeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1).max(40),
   address: z.string().max(200),
-  lat: z.number(),
-  lng: z.number(),
+  lat: latSchema,
+  lng: lngSchema,
   importance: z.union([z.literal(1), z.literal(2), z.literal(3)]),
 })
 
@@ -39,8 +46,8 @@ const profileSchema = z.object({
     .object({
       label: z.string().min(1).max(40),
       address: z.string().max(200),
-      lat: z.number(),
-      lng: z.number(),
+      lat: latSchema,
+      lng: lngSchema,
       commuteMode: z.enum(['TRANSIT', 'CAR']),
       targetMinutes: z.number().min(5).max(180),
     })
@@ -59,7 +66,7 @@ const profileSchema = z.object({
   }),
   areaUnit: z.enum(['PYEONG', 'M2']).optional(),
   presetId: z.string().optional(),
-  customWeights: z.record(z.string(), z.number()).optional(),
+  customWeights: z.record(z.string(), z.number().finite().min(0).max(100)).optional(),
   completeOnboarding: z.boolean().optional(),
 })
 
@@ -95,8 +102,8 @@ const propertySchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1).max(60),
   address: z.string().min(1).max(200),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
+  lat: latSchema.optional(),
+  lng: lngSchema.optional(),
   areaValue: z.number().min(1).max(600),
   inputUnit: z.enum(['PYEONG', 'M2']),
   priceManwon: z.number().min(100).max(10_000_000),
@@ -105,9 +112,9 @@ const propertySchema = z.object({
   totalHouseholds: z.number().min(1).max(50_000).nullable(),
   parkingPerHousehold: z.number().min(0).max(5).nullable(),
   monthlyFeePerM2: z.number().min(0).max(50_000).nullable(),
-  communityFacilities: z.array(z.string()),
+  communityFacilities: z.array(z.string().max(40)).max(30),
   structureType: z.enum(['WALL', 'RAHMEN']).nullable(),
-  userRisks: z.array(z.string()),
+  userRisks: z.array(z.string().max(40)).max(30),
   memo: z.string().max(1000).nullable(),
 })
 
@@ -307,7 +314,7 @@ export async function reanalyzeAllAction() {
 
 const weightSchema = z.object({
   presetId: z.string().min(1),
-  custom: z.record(z.string(), z.number()).optional(),
+  custom: z.record(z.string(), z.number().finite().min(0).max(100)).optional(),
 })
 
 export async function saveWeightsAction(input: z.input<typeof weightSchema>) {
