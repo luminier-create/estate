@@ -119,6 +119,7 @@ export default async function PropertyDetailPage({
           address={property.address}
           lat={property.lat}
           lng={property.lng}
+          landmarks={analysis?.landmarks ?? []}
         />
       </Card>
 

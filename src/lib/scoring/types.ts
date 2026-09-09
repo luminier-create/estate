@@ -221,6 +221,32 @@ export interface PropertyInput {
 
 // ─── Provider 가 채워 넣는 관측 데이터 ────────────────────────
 
+/** 지도에 표시할 주변 시설. 분석 시점의 관측을 그대로 남긴다. */
+export type LandmarkKind =
+  | 'SUBWAY'
+  | 'BUS'
+  | 'ELEMENTARY'
+  | 'MIDDLE'
+  | 'HIGH'
+  | 'MART'
+
+export const LANDMARK_LABEL: Record<LandmarkKind, string> = {
+  SUBWAY: '지하철역',
+  BUS: '버스정류장',
+  ELEMENTARY: '초등학교',
+  MIDDLE: '중학교',
+  HIGH: '고등학교',
+  MART: '대형마트',
+}
+
+export interface Landmark {
+  kind: LandmarkKind
+  name: string
+  lat: number
+  lng: number
+  distanceM: number
+}
+
 export interface PlaceHit {
   name: string
   lat: number

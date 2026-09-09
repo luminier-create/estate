@@ -1,6 +1,7 @@
 /** Firestore 문서 타입. 설계 근거: docs/04-DATA-MODEL.md */
 import type {
   CommunityFacility,
+  Landmark,
   DevelopmentItem,
   HouseholdType,
   CommuteMode,
@@ -72,4 +73,6 @@ export interface StoredAnalysis extends ScoreResult {
   propertyId: string
   profileHash: string
   expiresAt: string
+  /** 지도 표시용. 이 필드가 없던 시기의 분석 결과와 호환되도록 optional 이다. */
+  landmarks?: Landmark[]
 }

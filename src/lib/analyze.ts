@@ -10,7 +10,9 @@ import 'server-only'
 import { computeScore } from './scoring/aggregate'
 import { m2ToPyeong, median, quantile, removeOutliers } from './scoring/normalize'
 import { getPreset, normalizeWeights } from './scoring/presets'
+import { collectLandmarks } from './scoring/landmarks'
 import type {
+  Landmark,
   Observations,
   PropertyInput,
   ScoreResult,
@@ -264,6 +266,8 @@ export interface AnalyzeOutcome {
   result: ScoreResult
   /** 실거래 데이터에서 추정한 건축년도. 단지에 값이 없을 때만 채워진다. */
   inferredBuildYear: number | null
+  /** 지도 표시용 주변 시설. 분석 시점의 관측을 그대로 남긴다. */
+  landmarks: Landmark[]
 }
 
 export async function analyzeProperty(
@@ -293,6 +297,7 @@ export async function analyzeProperty(
     result,
     inferredBuildYear:
       storedProperty.buildYear == null ? (property.buildYear ?? null) : null,
+    landmarks: collectLandmarks(observations),
   }
 }
 

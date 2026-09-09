@@ -44,6 +44,11 @@ test('전체 흐름: 로그인 → 온보딩 → 단지 등록 → 분석 → �
   await page.waitForURL(/\/properties\/p_/, { timeout: 45_000 })
   await expect(page.getByText(/등급/).first()).toBeVisible()
 
+  // 위치 카드에 주변 시설이 거리·도보시간과 함께 노출된다
+  // (지도 키가 없는 환경에서도 텍스트로 확인 가능해야 한다)
+  await expect(page.getByText('지하철역', { exact: true })).toBeVisible()
+  await expect(page.getByText(/도보 \d+분/).first()).toBeVisible()
+
   await page.goto('/properties/new')
   await registerProperty(page, '상계', `상계주공 7단지 ${stamp}`, '18.5', '75000')
   await page.waitForURL(/\/properties\/p_/, { timeout: 45_000 })

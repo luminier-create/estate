@@ -242,7 +242,7 @@ export async function runAnalysis(propertyId: string, presetId?: string) {
     return { ok: false as const, error: '단지 또는 프로필을 찾을 수 없습니다.' }
   }
 
-  const { result, inferredBuildYear } = await analyzeProperty(
+  const { result, inferredBuildYear, landmarks } = await analyzeProperty(
     property,
     profile,
     presetId,
@@ -259,6 +259,7 @@ export async function runAnalysis(propertyId: string, presetId?: string) {
     propertyId,
     profileHash: hash,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    landmarks,
   })
 
   revalidatePath('/dashboard')
