@@ -26,6 +26,8 @@ import type {
 
 const kakaoKey = process.env.KAKAO_REST_API_KEY
 const molitKey = process.env.MOLIT_SERVICE_KEY
+// 활용신청한 서비스에 따라 엔드포인트가 갈린다 (일반/상세). 기본값은 일반 자료.
+const molitServiceName = process.env.MOLIT_SERVICE_NAME
 const odsayKey = process.env.ODSAY_API_KEY
 const rebKey = process.env.REB_API_KEY
 
@@ -61,7 +63,7 @@ export function geoProvider(): GeoProvider {
 
 export function marketProvider(): MarketProvider {
   marketCache ??= molitKey
-    ? new MolitMarketProvider(molitKey)
+    ? new MolitMarketProvider(molitKey, molitServiceName)
     : new MockMarketProvider()
   return marketCache
 }

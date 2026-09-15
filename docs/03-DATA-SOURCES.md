@@ -74,7 +74,13 @@ export const KAKAO_CATEGORY = {
 
 - 포털: https://www.data.go.kr/data/15126468/openapi.do (아파트 매매 실거래가 **상세** 자료)
 - 일반 자료: https://www.data.go.kr/data/15126469/openapi.do
-- 엔드포인트: `http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev`
+- 엔드포인트: `https://apis.data.go.kr/1613000/<서비스명>/get<서비스명>`
+  - 일반 자료: `RTMSDataSvcAptTrade` ← **기본값** (`DEFAULT_SERVICE_NAME`)
+  - 상세 자료: `RTMSDataSvcAptTradeDev` (`MOLIT_SERVICE_NAME` 로 전환)
+
+> **인증키는 활용신청한 서비스 단위로만 유효하다.** 일반 자료로 발급받은 키로
+> 상세 자료를 부르면 `SERVICE_ACCESS_DENIED_ERROR`(코드 20) 가 난다. 어느 쪽이
+> 유효한지는 `npm run probe:molit` 이 두 서비스를 모두 찔러보고 알려준다.
 - 트래픽: 개발계정 **일 10,000회**. 운영계정은 활용사례 등록 후 증량 신청 [확인됨]
 - 활용 신청 즉시 승인(자동승인 데이터셋)
 
@@ -87,7 +93,7 @@ export const KAKAO_CATEGORY = {
 | `DEAL_YMD` | 계약년월 6자리 | `202608` |
 | `pageNo` / `numOfRows` | 페이징 | `1` / `1000` |
 
-### 3.2 응답 주요 필드 (상세 자료)
+### 3.2 응답 주요 필드 (상세 자료 기준) [상세=확인됨 / 일반=미확인]
 
 ```
 aptNm         단지명
@@ -106,10 +112,19 @@ cdealType     해제여부 (해제된 거래는 제외 필요)
 - `dealAmount` 는 `" 123,000"` 형태 → `trim().replace(/,/g,'')` 후 Number
 - `cdealType === 'O'` (해제) 건은 시세 계산에서 **반드시 제외**
 - 응답은 XML 기본. `_type=json` 미지원 데이터셋이 있어 XML 파서 준비 필요
-- serviceKey 는 **디코딩 키**를 쓰고 fetch URL 조립 시 인코딩하거나,
-  인코딩 키를 그대로 문자열 결합. 이중 인코딩이 대표적 실패 원인
+- serviceKey 는 포털이 Encoding/Decoding 두 형태로 보여준다. 인코딩 키를 다시
+  인코딩하면 `%252F` 가 되고, 디코딩 키를 그대로 붙이면 `+` 가 공백이 되어
+  양쪽 다 인증이 깨진다. `normalizeServiceKey()` 가 `%` 유무로 판별해 한 번만
+  인코딩된 형태로 맞추므로 **어느 쪽을 넣어도 동작한다**
+  (base64 문자집합에 `%` 가 없어 판별이 모호하지 않다)
 - 실거래 신고 기한이 계약일로부터 30일이므로 **당월 데이터는 불완전**하다.
   시세 산출 윈도우는 `직전월 ~ 6개월 전` 으로 잡는다
+
+**일반 자료의 응답 필드는 아직 실응답으로 확인하지 못했다** [미확인]. 파서가
+기대하는 필드는 `EXPECTED_FIELDS`, 없어도 동작하는 필드는 `OPTIONAL_FIELDS`
+(`src/lib/providers/molit/parse.ts`) 에 명시했고, `npm run probe:molit` 이 실응답과
+대조해 누락을 짚는다. 특히 `cdealType` 이 일반 자료에 없으면 **계약 해제 건을
+걸러낼 수 없어 시세가 왜곡되므로**, 없다고 확인되면 상세 자료로 전환해야 한다.
 
 ### 3.3 법정동 코드
 

@@ -22,6 +22,7 @@
 | `npm run check:firebase` | Firebase 설정 점검 (배포된 규칙 대조 포함) |
 | `npm run deploy:rules` | Firestore 보안 규칙·인덱스 배포 |
 | `npm run probe:rone` | R-ONE 응답 스키마 확인 (네트워크 열린 환경에서) |
+| `npm run probe:molit` | 국토부 실거래가 키·응답 필드 점검 (네트워크 열린 환경에서) |
 
 ## 구조
 

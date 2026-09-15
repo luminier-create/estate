@@ -57,6 +57,23 @@ Provider 인터페이스 뒤에 있어 교체 비용은 작다.
 - **신고 기한이 계약일로부터 30일** 이라 최근 1~2개월 데이터는 계속 채워진다
   → 캐시 TTL 을 최근 월만 짧게 잡는 근거
 
+**키는 서비스 단위로 유효하다** `[확인됨]` — 같은 실거래가라도 일반 자료
+(15126469 / `RTMSDataSvcAptTrade`)와 상세 자료(15126468 / `RTMSDataSvcAptTradeDev`)는
+별개의 활용신청 대상이다. 한쪽 키로 다른 쪽을 부르면 `SERVICE_ACCESS_DENIED_ERROR`
+(코드 20). 어댑터 기본값은 일반 자료이고 `MOLIT_SERVICE_NAME` 으로 전환한다.
+
+**일반 자료의 응답 필드는 아직 실응답으로 확인하지 못했다** `[미확인]` —
+이 환경에서 `apis.data.go.kr` 이 egress 허용목록에 없다(§1.7). 특히 `cdealType`
+(해제 여부)의 존재 여부가 중요하다. 없으면 계약 해제 건을 걸러낼 수 없어
+시세가 왜곡되고, 그 경우 상세 자료로 전환해야 한다.
+`npm run probe:molit` 이 두 서비스를 모두 찔러 (1) 키가 어느 쪽에 유효한지
+(2) 파서가 기대하는 필드가 실제로 오는지 (3) 해제 건이 섞여 오는지를 한 번에 알린다.
+
+**2026-09-15 확인**: 키를 `.env.local` 에 넣고 `providerStatus.market` 이 `molit` 로
+전환된 상태에서 E2E 9건이 전부 통과했다. 실 Provider 가 네트워크 차단으로 계속
+실패하는 조건인데도 화면이 깨지지 않고 VALUE·INVESTMENT 축만 "데이터 없음" 으로
+강등되며 신뢰도가 65% 로 내려간다 — 결측 내성이 실제 장애 조건에서 처음 검증된 셈이다.
+
 ### 1.4 Firebase 요금제
 
 `[확인됨]` 확인일 2026-09-09
@@ -225,6 +242,31 @@ npm run probe:rone -- "<개발가이드에서 복사한 요청 URL>"
 - 무료 티어 일일 한도. `QUOTA_REB` 기본값 1,000 은 근거 있는 수치가 아니라
   "모르니 낮게" 잡은 값이다. 확인되면 조정한다
 - 지표 6종이 전부 같은 오퍼레이션으로 조회되는지, 지표마다 다른지
+
+---
+
+### 1.7 이 개발 환경의 egress 허용목록
+
+`[확인됨]` 확인일 2026-09-15
+
+외부 API 호스트가 프록시에서 막힌다. **조직 차원의 금지가 아니라 환경 설정이다** —
+프록시가 돌려주는 본문이 그렇게 알려준다:
+
+```
+request blocked: no rule or allowlist entry allows host "apis.data.go.kr"
+```
+```
+Host not in allowlist: apis.data.go.kr.
+Add this host to your network egress settings to allow access.
+```
+
+막힌 호스트: `apis.data.go.kr`, `www.data.go.kr`, `dapi.kakao.com`,
+`openapi.kakao.com`, `api.odsay.com`, `www.reb.or.kr`
+
+즉 호스트를 허용목록에 추가하면 이 환경에서 바로 실호출로 검증할 수 있다.
+그 전까지는 망이 열린 곳에서 `npm run probe:molit` / `npm run probe:rone` 로
+실응답을 한 번 받아 스키마를 확정한다. 검색 스니펫이나 2차 출처만 보고
+필드명을 코드에 넣지 않는다 (§1.5 가 그렇게 막힌 사례다).
 
 ---
 
