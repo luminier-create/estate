@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check:firebase": "node scripts/check-firebase.mjs",
+    "probe:rone": "node scripts/probe-rone.mjs",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {

@@ -103,6 +103,34 @@ test('전체 흐름: 로그인 → 온보딩 → 단지 등록 → 분석 → �
   await expect(page.getByRole('table')).toBeVisible()
 })
 
+test('지역 시장 지표: 선택이 URL 에 남고 결과가 바뀐다', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /데모 모드로 둘러보기/ }).click()
+  await page.waitForURL(/\/onboarding|\/dashboard/)
+
+  await page.goto('/market')
+  // 온보딩이 아직이면 이 테스트의 관심사가 아니므로 건너뛴다
+  if (page.url().includes('/onboarding')) test.skip()
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('지역 시장 지표')
+  await expect(page.getByRole('table')).toBeVisible()
+
+  // 지표를 바꾸면 제목과 표가 그에 맞게 바뀐다
+  await page.getByLabel('지표').selectOption('JEONSE_CONVERSION_RATE')
+  await expect(page.getByRole('heading', { level: 2 }).first()).toContainText('전월세전환율')
+  // 선택이 URL 에 남아야 새로고침·공유가 동작한다
+  await expect(page).toHaveURL(/indicator=JEONSE_CONVERSION_RATE/)
+
+  // 기간을 바꾸면 행 수가 따라온다
+  await page.getByLabel('기간').selectOption('12')
+  await expect(page.getByText('12개월', { exact: true })).toBeVisible()
+  await expect(page.locator('table tbody tr')).toHaveCount(12)
+
+  // 알 수 없는 쿼리를 넣어도 빈 화면이 되지 않고 기본값으로 되돌아간다
+  await page.goto('/market?region=없는코드&indicator=없는지표&months=999')
+  await expect(page.getByRole('table')).toBeVisible()
+})
+
 async function registerProperty(
   page: import('@playwright/test').Page,
   search: string,

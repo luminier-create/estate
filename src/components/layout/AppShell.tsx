@@ -6,6 +6,7 @@ const NAV = [
   { href: '/dashboard', label: '내 후보', icon: '◉' },
   { href: '/properties/new', label: '단지 등록', icon: '＋' },
   { href: '/compare', label: '비교', icon: '⇄' },
+  { href: '/market', label: '시장', icon: '↗' },
   { href: '/settings', label: '내 정보', icon: '⚙' },
 ] as const
 

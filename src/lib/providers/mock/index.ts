@@ -12,11 +12,15 @@ import type {
   CategoryCode,
   GeocodeResult,
   GeoProvider,
+  MarketIndexProvider,
+  MarketIndexSeries,
+  MarketIndicator,
   MarketProvider,
   PlaceSearchResult,
   TransitMode,
   TransitProvider,
 } from '../types'
+import { MARKET_INDICATORS } from '../types'
 import { seedByCategory, SEED_PLACES } from './seed-places'
 
 /** 문자열 → 32bit 결정적 해시 */
@@ -216,9 +220,97 @@ export class MockAptInfoProvider implements AptInfoProvider {
   }
 }
 
+// ─── 지역 시장 지표 ──────────────────────────────────────────
+
+/**
+ * 시연용 지역 목록. 실구현(R-ONE)은 자체 지역코드 체계를 쓰므로 코드 값이 다르다 —
+ * 화면이 `regions()` 가 준 코드를 그대로 되돌려주는 구조라 교체해도 깨지지 않는다.
+ */
+const MOCK_REGIONS = [
+  { code: 'M11', name: '서울' },
+  { code: 'M26', name: '부산' },
+  { code: 'M27', name: '대구' },
+  { code: 'M28', name: '인천' },
+  { code: 'M41', name: '경기' },
+  { code: 'M11680', name: '서울 강남구' },
+  { code: 'M11350', name: '서울 노원구' },
+  { code: 'M41285', name: '경기 고양시 일산서구' },
+] as const
+
+/** 지표별 기준값과 변동 폭. 값의 자릿수를 그럴듯하게 맞추기 위한 것일 뿐이다. */
+const MOCK_SHAPE: Record<
+  MarketIndicator,
+  { base: number; swing: number; unit: string; decimals: number }
+> = {
+  SALE_PRICE_INDEX: { base: 100, swing: 6, unit: '지수', decimals: 1 },
+  JEONSE_PRICE_INDEX: { base: 100, swing: 5, unit: '지수', decimals: 1 },
+  REAL_TRADE_INDEX: { base: 100, swing: 9, unit: '지수', decimals: 1 },
+  JEONSE_CONVERSION_RATE: { base: 5.6, swing: 0.8, unit: '%', decimals: 2 },
+  LAND_PRICE_CHANGE: { base: 0.2, swing: 0.35, unit: '%', decimals: 2 },
+  UNSOLD_UNITS: { base: 1800, swing: 900, unit: '호', decimals: 0 },
+}
+
+/** 최근 n개월의 YYYYMM 배열. 오래된 것부터. */
+function recentPeriods(months: number, now = new Date()): string[] {
+  const out: string[] = []
+  const cursor = new Date(now.getFullYear(), now.getMonth(), 1)
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(cursor.getFullYear(), cursor.getMonth() - i, 1)
+    out.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return out
+}
+
+export class MockMarketIndexProvider implements MarketIndexProvider {
+  readonly name = 'mock-market-index'
+  readonly supported = MARKET_INDICATORS
+
+  async regions() {
+    return MOCK_REGIONS.map((r) => ({ code: r.code, name: r.name }))
+  }
+
+  async series(
+    indicator: MarketIndicator,
+    regionCode: string,
+    months: number,
+  ): Promise<MarketIndexSeries | null> {
+    const region = MOCK_REGIONS.find((r) => r.code === regionCode)
+    if (!region) return null
+
+    const shape = MOCK_SHAPE[indicator]
+    const periods = recentPeriods(months)
+
+    // 결정적이어야 한다 — 같은 입력에 같은 출력이라야 테스트가 성립한다.
+    // 지역·지표별 위상을 달리한 완만한 파형에 미세한 잡음을 얹는다.
+    const seed = hash32(`${indicator}:${regionCode}`)
+    const phase = (seed % 360) * (Math.PI / 180)
+    const drift = ((seed >> 8) % 11) - 5
+
+    const points = periods.map((period, i) => {
+      const t = i / Math.max(1, periods.length - 1)
+      const wave = Math.sin(phase + t * Math.PI * 1.4)
+      const noise = ((hash32(`${period}:${regionCode}:${indicator}`) % 200) - 100) / 1000
+      const raw =
+        shape.base + wave * shape.swing + drift * shape.swing * 0.06 * t + noise * shape.swing
+      const factor = 10 ** shape.decimals
+      return { period, value: Math.round(Math.max(0, raw) * factor) / factor }
+    })
+
+    return {
+      indicator,
+      regionCode,
+      regionName: region.name,
+      unit: shape.unit,
+      points,
+      source: { label: '시드 데이터 (실데이터 아님)', asOf: '' },
+    }
+  }
+}
+
 export const mockProviders = {
   geo: new MockGeoProvider(),
   transit: new MockTransitProvider(),
   market: new MockMarketProvider(),
   aptInfo: new MockAptInfoProvider(),
+  marketIndex: new MockMarketIndexProvider(),
 }

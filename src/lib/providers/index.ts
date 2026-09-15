@@ -11,12 +11,14 @@ import { MolitMarketProvider } from './molit'
 import { OdsayTransitProvider } from './odsay'
 import {
   MockAptInfoProvider,
+  MockMarketIndexProvider,
   MockGeoProvider,
   MockMarketProvider,
   MockTransitProvider,
 } from './mock'
 import type {
   AptInfoProvider,
+  MarketIndexProvider,
   GeoProvider,
   MarketProvider,
   TransitProvider,
@@ -25,13 +27,21 @@ import type {
 const kakaoKey = process.env.KAKAO_REST_API_KEY
 const molitKey = process.env.MOLIT_SERVICE_KEY
 const odsayKey = process.env.ODSAY_API_KEY
+const rebKey = process.env.REB_API_KEY
 
 export const providerStatus = {
   geo: kakaoKey ? 'kakao' : 'mock',
   market: molitKey ? 'molit' : 'mock',
   transit: odsayKey ? 'odsay' : 'mock',
   aptInfo: 'mock',
+  // R-ONE 어댑터는 응답 스키마를 실제로 확인한 뒤에 붙인다. 키가 있어도 아직
+  // 모의 구현으로 떨어지며, 그 사실을 화면이 그대로 알린다.
+  // 경위: docs/10-KNOWLEDGE.md §1.6
+  marketIndex: 'mock',
 } as const
+
+/** 키는 있는데 어댑터가 아직 없는 상태인지. 화면 안내 문구를 가르는 값이다. */
+export const rebKeyPresent = Boolean(rebKey)
 
 export const isAllMock =
   providerStatus.geo === 'mock' &&
@@ -42,6 +52,7 @@ let geoCache: GeoProvider | null = null
 let marketCache: MarketProvider | null = null
 let transitCache: TransitProvider | null = null
 let aptInfoCache: AptInfoProvider | null = null
+let marketIndexCache: MarketIndexProvider | null = null
 
 export function geoProvider(): GeoProvider {
   geoCache ??= kakaoKey ? new KakaoGeoProvider(kakaoKey) : new MockGeoProvider()
@@ -65,6 +76,11 @@ export function transitProvider(): TransitProvider {
 export function aptInfoProvider(): AptInfoProvider {
   aptInfoCache ??= new MockAptInfoProvider()
   return aptInfoCache
+}
+
+export function marketIndexProvider(): MarketIndexProvider {
+  marketIndexCache ??= new MockMarketIndexProvider()
+  return marketIndexCache
 }
 
 /** ODsay 정류장 조회는 인터페이스 밖의 확장 기능이라 별도로 노출한다. */

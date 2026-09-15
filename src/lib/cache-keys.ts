@@ -79,6 +79,21 @@ export function marketKey(
 }
 
 /**
+ * 지역 시장 지표 시계열.
+ *
+ * 개월 수를 키에 넣는다. 24개월 요청과 12개월 요청은 다른 결과이며, 뭉치면
+ * 짧게 요청한 쪽이 긴 캐시를 덮어써 데이터가 사라진 것처럼 보인다.
+ */
+export function marketIndexKey(
+  source: string,
+  indicator: string,
+  regionCode: string,
+  months: number,
+): string {
+  return `idx_${sourceTag(source)}_${indicator}_${regionCode}_${months}`
+}
+
+/**
  * 실거래 TTL — 과거 월의 확정 데이터는 변하지 않지만, 최근 두 달은
  * 신고 기한(계약일로부터 30일) 때문에 계속 채워지므로 짧게 잡는다.
  */
@@ -100,11 +115,14 @@ export const CACHE_POLICY = {
   poi: { collection: 'cache_poi', ttlMs: 90 * DAY_MS },
   route: { collection: 'cache_route', ttlMs: 30 * DAY_MS },
   market: { collection: 'cache_market', ttlMs: DAY_MS },
+  // 통계 지표는 월 단위로 갱신된다. 하루 캐시면 갱신일을 하루 안에 따라잡으면서
+  // 같은 화면을 반복해 열어도 호출이 늘지 않는다.
+  marketIndex: { collection: 'cache_market_index', ttlMs: DAY_MS },
 } as const satisfies Record<string, CachePolicy>
 
 // ─── 쿼터 ────────────────────────────────────────────────────
 
-export type QuotaProvider = 'kakao' | 'molit' | 'odsay'
+export type QuotaProvider = 'kakao' | 'molit' | 'odsay' | 'reb'
 
 /**
  * 일일 호출 상한.
@@ -115,6 +133,8 @@ export const DEFAULT_QUOTA: Record<QuotaProvider, number> = {
   kakao: 30_000,
   molit: 9_000,
   odsay: 800,
+  // R-ONE 무료 한도를 확인하지 못했다(egress 차단). 확인 전까지 보수적으로 잡는다.
+  reb: 1_000,
 }
 
 export function quotaLimit(provider: QuotaProvider): number {

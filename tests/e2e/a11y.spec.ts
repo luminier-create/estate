@@ -104,6 +104,11 @@ test('대시보드·단지 등록·설정 화면', async ({ page }) => {
 
   await page.goto('/settings')
   await audit(page, '설정')
+
+  // 차트가 들어간 화면 — 색 대비와 폼 라벨을 함께 본다
+  await page.goto('/market')
+  await page.getByRole('heading', { level: 1, name: '지역 시장 지표' }).waitFor()
+  await audit(page, '지역 시장 지표')
 })
 
 test('단지 상세 화면', async ({ page }) => {

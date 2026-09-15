@@ -21,6 +21,7 @@
 | `npm run build` | 프로덕션 빌드 |
 | `npm run check:firebase` | Firebase 설정 점검 (배포된 규칙 대조 포함) |
 | `npm run deploy:rules` | Firestore 보안 규칙·인덱스 배포 |
+| `npm run probe:rone` | R-ONE 응답 스키마 확인 (네트워크 열린 환경에서) |
 
 ## 구조
 
@@ -136,8 +137,13 @@ pkill -f "nex[t]-server"; rm -rf .next && npm run test:e2e
 ### 이 작업 환경에서는 외부 API 호스트에 닿지 않는다
 
 `apis.data.go.kr`(국토부), `dapi.kakao.com`·`openapi.kakao.com`(카카오),
-`api.odsay.com`, `www.data.go.kr` 이 전부 egress 프록시에서 막힌다
-(`CONNECT tunnel failed, response 403`). 2026-09-09 확인.
+`api.odsay.com`, `www.data.go.kr`, `www.reb.or.kr`(한국부동산원)이 전부 egress
+프록시에서 막힌다 (`CONNECT tunnel failed, response 403`). 2026-09-15 확인.
+
+**조직 금지가 아니라 환경의 허용목록 설정이다.** 프록시가 돌려주는 본문이
+`Host not in allowlist: <호스트>. Add this host to your network egress settings`
+라고 알려준다. 호스트를 허용목록에 추가하면 이 세션에서 바로 호출할 수 있으므로,
+막혔다고 포기하기 전에 이 메시지를 확인하고 사용자에게 전달한다.
 
 **Provider 를 여기서 실호출로 검증할 수 없다는 뜻이다.** 이 환경의 모든 실행은
 Mock Provider 로 떨어지고, CI 가 키 없이 통과하는 것도 그래서다. 결과적으로

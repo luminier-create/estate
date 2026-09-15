@@ -11,6 +11,7 @@ import {
   quotaKey,
   quotaLimit,
   routeKey,
+  marketIndexKey,
 } from '@/lib/cache-keys'
 
 describe('캐시 키', () => {
@@ -119,5 +120,21 @@ describe('쿼터', () => {
     // 국토부 개발계정 일 10,000회 — 여유를 둔다
     expect(quotaLimit('molit')).toBeLessThan(10_000)
     expect(quotaLimit('odsay')).toBeGreaterThan(0)
+  })
+})
+
+describe('지역 시장 지표 캐시 키', () => {
+  it('지표·지역·기간을 모두 구분한다', () => {
+    const a = marketIndexKey('reb', 'SALE_PRICE_INDEX', 'M11', 24)
+    expect(a).not.toBe(marketIndexKey('reb', 'JEONSE_PRICE_INDEX', 'M11', 24))
+    expect(a).not.toBe(marketIndexKey('reb', 'SALE_PRICE_INDEX', 'M26', 24))
+    // 개월 수를 빠뜨리면 12개월 요청이 24개월 캐시를 덮어써 데이터가 사라져 보인다
+    expect(a).not.toBe(marketIndexKey('reb', 'SALE_PRICE_INDEX', 'M11', 12))
+  })
+
+  it('모의 구현과 실구현이 같은 칸을 쓰지 않는다', () => {
+    expect(marketIndexKey('mock-market-index', 'SALE_PRICE_INDEX', 'M11', 24)).not.toBe(
+      marketIndexKey('reb', 'SALE_PRICE_INDEX', 'M11', 24),
+    )
   })
 })
