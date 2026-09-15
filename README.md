@@ -95,9 +95,12 @@ Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" �
 | `npm run build` | 프로덕션 빌드 |
 | `npm run typecheck` | TypeScript strict 검사 |
 | `npm run lint` | ESLint |
-| `npm test` | 스코어링 엔진 단위 테스트 (84건) |
+| `npm test` | 단위 테스트 (스코어링·캐시·Provider 파싱, 168건) |
 | `npm run test:e2e` | Playwright E2E (전 흐름 + 접근성 감사) |
 | `npm run check:firebase` | Firebase 설정 점검 (값 검증 + 실제 연결 테스트) |
+| `npm run deploy:rules` | Firestore 보안 규칙·인덱스 배포 |
+| `npm run probe:molit` | 국토부 실거래가 키·응답 필드 점검 |
+| `npm run probe:rone` | 한국부동산원 R-ONE 응답 스키마 확인 |
 
 E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저는 Playwright가 설치한 것을
 자동으로 찾으며, 다른 위치의 Chromium을 쓰려면 `PLAYWRIGHT_CHROMIUM_PATH` 로 지정한다.
@@ -114,7 +117,15 @@ E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저�
 외부 API 키나 Firebase 설정 없이 통과한다. Provider가 시드 데이터로 폴백하고
 인증은 데모 모드를 쓰기 때문이다.
 
-## 배포 (Firebase App Hosting)
+## 배포
+
+시연용으로는 **Vercel 에 환경변수 `DEMO_SEED=1` 하나만 넣고 올리면 된다** —
+키가 없으면 Mock Provider 로 떨어지므로 시크릿 없이도 전 화면이 동작한다.
+절차와 제약(인메모리 저장소라 쓰기가 남지 않는다)은 `docs/06-DEPLOY.md`.
+
+아래는 실데이터·영속 저장을 붙인 Firebase App Hosting 기준이다.
+
+### Firebase App Hosting
 
 ```bash
 firebase init apphosting          # 저장소 연결

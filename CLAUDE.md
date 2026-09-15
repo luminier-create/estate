@@ -89,6 +89,25 @@ npm run test:e2e     # 화면·흐름을 건드렸다면
 `.next` 가 프로덕션 산출물로 덮여 개발 서버가 깨진다. E2E 가 전부 타임아웃 나며
 원인 파악에 시간이 걸린다. 빌드 후에는 개발 서버를 다시 시작한다.
 
+**증상으로 판별한다** — 테스트 실패 메시지가 아니라 `[WebServer]` 로그를 본다.
+
+```
+[WebServer] ⨯ Error: Cannot find module './vendor-chunks/fast-xml-parser.js'
+[WebServer] ⨯ Error: Cannot find module '.next/server/app/api/.../route.js'
+```
+
+이 줄이 보이면 코드 결함이 아니다. 화면에는 "요소를 찾을 수 없다"로 나타나서
+방금 고친 코드를 의심하게 되는데, 실제로는 서버가 청크를 잃은 것뿐이다.
+
+**서브에이전트를 병렬로 돌릴 때도 걸린다.** 검토용 에이전트가 검증한다고
+`npm run build` 를 돌리면 내 E2E 의 개발 서버가 같은 방식으로 깨진다. 이렇게
+실패한 뒤에는 깨진 개발 서버가 살아남아 다음 실행까지 오염시키므로, 재실행 전에
+반드시 정리한다.
+
+```bash
+pkill -f "nex[t]-server"; pkill -f "nex[t] dev"; rm -rf .next test-results
+```
+
 ### Tailwind v4 에서 CSS 변수는 `var()` 를 명시
 
 `bg-[--color-brand]` 는 적용되지 않는다. `bg-[var(--color-brand)]` 로 쓴다.
