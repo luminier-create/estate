@@ -38,6 +38,11 @@ export interface StoredProfile {
   /** 면적 표시 단위 선호 */
   areaUnit: 'PYEONG' | 'M2'
   onboardingCompleted: boolean
+  /**
+   * 시연용 시드 데이터를 넣은 시각. 데모(인메모리) 저장소에서만 설정된다.
+   * 있으면 다시 넣지 않는다 — 없으면 사용자가 지운 시드 단지가 계속 되살아난다.
+   */
+  seededAt?: string
   createdAt: string
   updatedAt: string
 }

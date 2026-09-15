@@ -84,19 +84,42 @@ async function geocode(query: string) {
 }
 
 /**
- * 데모 사용자에게 후보 3건과 분석을 채운다.
- *
- * 이미 단지가 있으면 아무것도 하지 않는다 — 방문자가 만든 것을 덮지 않기 위함이고,
- * 같은 인스턴스가 요청을 반복해서 받아도 멱등이어야 하기 때문이다.
+ * 데모 사용자에게 후보 3건과 분석을 채운다. 인증된 모든 요청이 지나는 자리라
+ * **실패해도 화면을 막지 않아야 한다** — 시드는 부가 기능이다.
  */
 export async function ensureDemoSeed(uid: string): Promise<void> {
+  try {
+    await seed(uid)
+  } catch (e) {
+    // 여기서 던지면 (app) 레이아웃에서 터진다. 같은 세그먼트의 error.tsx 는
+    // 자기 레이아웃의 오류를 잡지 못하므로 전 화면이 루트 오류로 떨어지고,
+    // 매 요청 재시도되므로 사용자는 어디로도 들어가지 못한다.
+    console.error('[demo-seed] 시드 데이터 생성 실패 — 빈 상태로 계속한다', e)
+  }
+}
+
+async function seed(uid: string): Promise<void> {
   if (!demoSeedEnabled || !isDemoStore()) return
+
+  const profile = await getProfile(uid)
+  if (!profile) return
+
+  // 한 번 넣었으면 다시 넣지 않는다. 단지 개수만 보면 방문자가 "(예시)" 단지를
+  // 지우거나 보류함으로 옮긴 순간 0건이 되어 지운 것이 되살아나고,
+  // 그 김에 프로필까지 시드 값으로 되돌아간다.
+  if (profile.seededAt) return
+
+  // 사용자가 직접 채운 프로필은 건드리지 않는다. 온보딩을 마치고 대시보드로
+  // 이동하면 이 코드가 바로 그 다음에 도는데, 방금 입력한 예산·직장이
+  // 시드 값으로 교체되면 입력이 통째로 사라진 것처럼 보인다.
+  if (profile.onboardingCompleted) return
 
   const existing = await listProperties(uid)
   if (existing.length > 0) return
 
-  const profile = await getProfile(uid)
-  if (!profile) return
+  // 표시를 먼저 남긴다 — 같은 인스턴스에 요청이 겹쳐도 시딩이 두 번 돌 틈을 줄이고,
+  // 중간에 실패하더라도 매 요청 재시도되지 않는다.
+  await updateProfile(uid, { seededAt: new Date().toISOString() })
 
   const [office, place] = await Promise.all([
     geocode(SEED_PROFILE.officeQuery),

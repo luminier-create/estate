@@ -23,19 +23,42 @@ export interface SessionUser {
   isDemo: boolean
 }
 
-const DEMO_USER: SessionUser = {
-  uid: 'demo-user',
-  email: 'demo@homefit.local',
-  displayName: '데모 사용자',
-  photoURL: null,
-  isDemo: true,
+/**
+ * 데모 세션 식별자.
+ *
+ * 예전에는 고정 uid 하나('demo-user')를 썼다. 로컬에서는 문제가 없지만 공개
+ * 주소에 올리면 **모든 방문자가 같은 워크스페이스를 공유한다** — A 가 입력한
+ * 직장 주소와 후보 단지를 B 가 그대로 보고, B 가 지우면 A 의 것도 사라진다.
+ * 그래서 쿠키에 방문자별 난수를 담고 그것으로 저장 공간을 가른다.
+ *
+ * 이 값은 문서 경로(`users/<uid>/...`)가 되므로 **발급할 때와 읽을 때 같은
+ * 규칙으로 좁힌다.** 형식에 맞지 않으면 세션이 없는 것으로 본다 — 쿠키는
+ * 사용자가 고칠 수 있는 입력이다.
+ */
+const DEMO_ID = /^[a-z0-9]{8,32}$/
+
+export function newDemoId(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 32)
+}
+
+function demoUser(id: string): SessionUser {
+  return {
+    uid: `demo_${id}`,
+    email: 'demo@homefit.local',
+    displayName: '데모 사용자',
+    photoURL: null,
+    isDemo: true,
+  }
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const jar = await cookies()
 
   if (!isAdminConfigured) {
-    return jar.get(DEMO_COOKIE)?.value === '1' ? DEMO_USER : null
+    const id = jar.get(DEMO_COOKIE)?.value ?? ''
+    return DEMO_ID.test(id) ? demoUser(id) : null
   }
 
   const cookie = jar.get(SESSION_COOKIE)?.value

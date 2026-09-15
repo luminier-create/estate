@@ -9,6 +9,7 @@ import {
   DEMO_COOKIE,
   SESSION_COOKIE,
   SESSION_MAX_AGE_MS,
+  newDemoId,
 } from '@/lib/firebase/session'
 
 const bodySchema = z.object({
@@ -31,7 +32,8 @@ export async function POST(req: Request) {
       )
     }
     const res = NextResponse.json({ ok: true, mode: 'demo' })
-    res.cookies.set(DEMO_COOKIE, '1', {
+    // 방문자마다 다른 값을 준다 — 공개 주소에서 저장 공간을 공유하지 않기 위함이다
+    res.cookies.set(DEMO_COOKIE, newDemoId(), {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

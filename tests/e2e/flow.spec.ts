@@ -108,9 +108,10 @@ test('지역 시장 지표: 선택이 URL 에 남고 결과가 바뀐다', async
   await page.getByRole('button', { name: /데모 모드로 둘러보기/ }).click()
   await page.waitForURL(/\/onboarding|\/dashboard/)
 
+  // /market 은 온보딩 게이트가 없다. 예전에 있던 skip 가드는 절대 참이 되지
+  // 않아, 게이트가 생기면 실패 대신 조용히 건너뛰는 함정이 된다.
   await page.goto('/market')
-  // 온보딩이 아직이면 이 테스트의 관심사가 아니므로 건너뛴다
-  if (page.url().includes('/onboarding')) test.skip()
+  await expect(page).toHaveURL(/\/market/)
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('지역 시장 지표')
   await expect(page.getByRole('table')).toBeVisible()

@@ -57,13 +57,23 @@ export default async function MarketPage({
     : null
 
   const points = series?.points ?? []
+  // 표의 소수 자릿수는 값이 정하게 한다 — 지수는 소수 1자리, 세대수는 정수다
+  const tableDecimals = points.some((p) => !Number.isInteger(p.value)) ? 2 : 0
   const latest = points.at(-1)
   const first = points[0]
-  // 변동률은 그 자체가 이미 변화량이라 "기간 대비 변화"를 다시 계산하면 오해를 만든다
-  const isRate = indicator === 'LAND_PRICE_CHANGE'
-  const change =
-    !isRate && latest && first && first.value !== 0
-      ? ((latest.value - first.value) / Math.abs(first.value)) * 100
+  // 단위가 % 인 지표(변동률·전월세전환율)에 증감률을 다시 씌우면 "비율의 비율"이
+  // 되어 5.2% → 5.8% 가 "+11.5% 상승" 으로 읽힌다. 이런 지표는 %p 차이로 말한다.
+  const isPercentUnit = series?.unit.includes('%') ?? false
+  const delta =
+    latest && first
+      ? isPercentUnit
+        ? { value: latest.value - first.value, suffix: '%p' }
+        : first.value !== 0
+          ? {
+              value: ((latest.value - first.value) / Math.abs(first.value)) * 100,
+              suffix: '%',
+            }
+          : null
       : null
 
   return (
@@ -71,7 +81,10 @@ export default async function MarketPage({
       <header>
         <h1 className="text-xl font-bold sm:text-2xl">지역 시장 지표</h1>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          한국부동산원 통계. 단지 점수와는 별개로 지역 흐름만 봅니다.
+          {/* 실데이터가 아닐 때 출처를 단정하면 추정이 실측처럼 읽힌다 */}
+          {providerStatus.marketIndex === 'mock'
+            ? '지역 흐름을 보는 화면입니다. 지금은 시드 데이터로 동작 중입니다.'
+            : '한국부동산원 통계. 단지 점수와는 별개로 지역 흐름만 봅니다.'}
         </p>
       </header>
 
@@ -83,7 +96,7 @@ export default async function MarketPage({
           <p className="mt-1 text-sm text-[var(--color-muted)]">
             {rebKeyPresent
               ? 'REB_API_KEY 는 설정되어 있으나 R-ONE 응답 형식을 아직 확인하지 못해 시드 데이터로 표시합니다. 아래 숫자는 실제 통계가 아닙니다.'
-              : '.env.local 에 REB_API_KEY 를 넣으면 실제 통계로 전환됩니다. 아래 숫자는 실제 통계가 아닙니다.'}
+              : '환경변수에 REB_API_KEY 를 넣으면 실제 통계로 전환됩니다. 아래 숫자는 실제 통계가 아닙니다.'}
           </p>
         </Card>
       )}
@@ -123,7 +136,7 @@ export default async function MarketPage({
                   <span className="ml-1 text-sm text-[var(--color-muted)]">
                     {series.unit}
                   </span>
-                  {change !== null && (
+                  {delta !== null && (
                     <p className="mt-0.5 text-xs text-[var(--color-muted)]">
                       기간 내{' '}
                       {/* 색만으로 방향을 나타내지 않는다 — 색각 이상과
@@ -131,13 +144,14 @@ export default async function MarketPage({
                           (상승 빨강/하락 파랑은 국내 관행을 따른다) */}
                       <span
                         className={
-                          change >= 0
+                          delta.value >= 0
                             ? 'font-semibold text-[var(--color-negative)]'
                             : 'font-semibold text-[var(--color-positive)]'
                         }
                       >
-                        {change >= 0 ? '+' : ''}
-                        {change.toFixed(1)}% {change >= 0 ? '상승' : '하락'}
+                        {delta.value >= 0 ? '+' : ''}
+                        {delta.value.toFixed(1)}
+                        {delta.suffix} {delta.value >= 0 ? '상승' : '하락'}
                       </span>
                     </p>
                   )}
@@ -193,11 +207,13 @@ export default async function MarketPage({
                           {p.value.toLocaleString('ko-KR')}
                         </td>
                         <td className="py-2 text-right tabular-nums text-[var(--color-muted)]">
+                          {/* 자릿수를 화면에서 따로 정하면 "312.0 호" 처럼
+                              단위에 없는 정밀도가 생긴다. 값에서 유도한다. */}
                           {diff === null
                             ? '—'
                             : `${diff >= 0 ? '+' : ''}${diff.toLocaleString('ko-KR', {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 2,
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: tableDecimals,
                               })}`}
                         </td>
                       </tr>

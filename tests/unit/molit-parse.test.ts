@@ -145,3 +145,28 @@ describe('recentMonths', () => {
     expect(recentMonths(2, new Date(2026, 1, 1))).toEqual(['202601', '202512'])
   })
 })
+
+describe('필드명이 다른 응답', () => {
+  // 일반 자료의 필드명은 실응답으로 확인하지 못했다. 다를 경우 모든 행이
+  // 걸러져 빈 배열이 되는데, 그것을 "거래 0건" 으로 돌려주면 유동성 지표가
+  // 결측이 아니라 0(최악)으로 관측된다 — 데이터 없음을 나쁜 값으로 채점하는 것.
+  const renamed = `<item><apartmentName>래미안</apartmentName><area>84.97</area>
+<price>123,000</price><year>2026</year><month>8</month><day>5</day></item>`
+
+  it('전 행이 파싱되지 않으면 거래 0건이 아니라 오류다', () => {
+    expect(() => parseTradeXml(xml(renamed))).toThrow(/해석하지 못했습니다/)
+  })
+
+  it('진짜 0건(빈 items)은 오류가 아니다', () => {
+    expect(parseTradeXml(xml(''))).toEqual([])
+  })
+
+  it('전부 해제 건이어서 0건인 것도 오류가 아니다', () => {
+    const cancelled = ITEM.replace('</item>', '<cdealType>O</cdealType></item>')
+    expect(parseTradeXml(xml(cancelled))).toEqual([])
+  })
+
+  it('일부만 손상된 것은 오류가 아니다 — 나머지를 살린다', () => {
+    expect(parseTradeXml(xml(ITEM + renamed))).toHaveLength(1)
+  })
+})

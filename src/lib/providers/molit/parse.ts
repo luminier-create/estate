@@ -156,7 +156,24 @@ export function toTrades(items: MolitItem[]): Trade[] {
 }
 
 export function parseTradeXml(text: string): Trade[] {
-  return toTrades(parseTradeResponse(text))
+  const items = parseTradeResponse(text)
+  const live = items.filter(
+    (it) => String(it.cdealType ?? '').trim().toUpperCase() !== 'O',
+  )
+  const trades = toTrades(items)
+
+  // 응답 구조는 맞는데 **필드명이 다르면** 모든 행이 NaN 으로 걸러져 빈 배열이
+  // 된다. 그것을 "거래 0건" 으로 돌려주면 두 가지가 한꺼번에 망가진다 —
+  // 과거 월은 무기한 캐시라 그 빈 값이 굳고, 유동성 지표가 결측이 아니라
+  // 0(최악)으로 관측돼 **데이터가 없는 것이 값이 나쁜 것으로 채점된다.**
+  // 일반 자료의 필드명은 아직 실응답으로 확인하지 못했다 (docs/03-DATA-SOURCES.md §3.2).
+  if (live.length > 0 && trades.length === 0) {
+    throw new Error(
+      `국토부 실거래가 응답을 해석하지 못했습니다 — ${live.length}건 중 0건만 파싱됨. ` +
+        `응답 필드명이 기대와 다를 수 있습니다 (npm run probe:molit 으로 확인).`,
+    )
+  }
+  return trades
 }
 
 /**
