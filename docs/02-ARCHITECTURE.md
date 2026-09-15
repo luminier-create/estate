@@ -14,7 +14,7 @@
 | 인증 | Firebase Authentication (Google Provider) | 요구사항 직결. 세션은 ID 토큰 → 서버 쿠키 |
 | DB | Cloud Firestore | 사용자별 문서 격리 + 보안규칙, 무료 티어 |
 | 서버 로직 | Next.js Route Handlers + Server Actions | 별도 백엔드 불필요 |
-| 배포 | Firebase App Hosting | Next.js SSR 지원, GitHub 연동 자동배포 |
+| 배포 | Firebase App Hosting (목표) / Vercel (현재) | 키 없이도 뜨므로 양쪽 모두 코드 변경 없이 배포된다. 절차·제약은 `06-DEPLOY.md` |
 | 차트 | Recharts | 레이더/바 차트, SSR 호환 |
 | 지도 | Kakao Maps JS SDK | 국내 좌표·POI 정확도 |
 | 상태 | TanStack Query + Zustand | 서버 캐시 / 클라이언트 UI 상태 분리 |
