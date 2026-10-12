@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-fg: #111827;
+  --color-muted: #6b7280;
+  --color-subtle: #9ca3af;
+
+  /*
+   * 브랜드색은 용도에 따라 분리한다.
+   * - brand      : 배경·보더용. 흰 텍스트를 얹었을 때 4.5:1 이상이어야 한다.
+   * - brand-text : 텍스트·아이콘용. 밝은 배경 위에서 4.5:1 이상이어야 한다.
+   * 하나로 합치면 밝은 배경 위 작은 글자에서 WCAG AA 를 만족시킬 수 없다.
+   */
+  --color-brand: #1a5fd0;
+  --color-brand-text: #17539c;
+  --color-brand-dark: #14498f;
+  --color-brand-soft: #e8f0fe;
+
+  --color-grade-s: #0d9488;
+  --color-grade-a: #2563eb;
+  --color-grade-b: #7c3aed;
+  --color-grade-c: #d97706;
+  --color-grade-d: #dc2626;
+  --color-grade-e: #6b7280;
+
+  --color-positive: #059669;
+  --color-negative: #dc2626;
+
+  --radius-card: 14px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-bg: #0d1117;
+    --color-surface: #161b22;
+    --color-border: #262d36;
+    --color-fg: #e6edf3;
+    --color-muted: #9aa6b2;
+    --color-subtle: #6e7781;
+    --color-brand-soft: #16243c;
+    /* 어두운 배경에서는 텍스트용 브랜드색을 밝게 뒤집는다 */
+    --color-brand: #2f6fdc;
+    --color-brand-text: #7db3ff;
+    --color-brand-dark: #3f7ee8;
+    /* 상태색도 어두운 배경에서 4.5:1 을 넘도록 밝게 뒤집는다 */
+    --color-positive: #3fb950;
+    --color-negative: #ff7b72;
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family:
+    'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-feature-settings: 'tnum';
+  overscroll-behavior-y: none;
+}
+
+/* 모바일 하단 탭바가 콘텐츠를 가리지 않도록 */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+}
+
+@media (min-width: 768px) {
+  .pb-safe {
+    padding-bottom: 2rem;
+  }
+}
+
+/* 터치 타깃 최소 44px 보장 */
+button,
+a[role='button'] {
+  touch-action: manipulation;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}

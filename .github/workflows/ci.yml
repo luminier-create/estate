@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 같은 브랜치에 새 푸시가 오면 진행 중인 실행을 취소한다
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 타입·린트·단위테스트·빌드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: 타입 검사
+        run: npm run typecheck
+
+      - name: 린트
+        run: npm run lint
+
+      - name: 단위 테스트 (스코어링 엔진)
+        run: npm test
+
+      # 외부 API 키 없이 빌드된다 — Provider 가 시드 데이터로 폴백하기 때문
+      - name: 프로덕션 빌드
+        run: npm run build
+
+  e2e:
+    name: E2E (로그인→온보딩→등록→분석→비교)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Chromium 설치
+        run: npx playwright install --with-deps chromium
+
+      # Firebase·외부 API 키 없이 데모 모드로 전 흐름을 검증한다
+      - name: E2E 실행
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "properties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "analyses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "propertyId", "order": "ASCENDING" },
+        { "fieldPath": "computedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
