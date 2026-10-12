@@ -33,12 +33,14 @@ Vercel 로 눈에 보이게 띄우고 Firebase 는 실데이터 단계에서 붙
 
 ### 배포 브랜치
 
-Vercel 은 저장소의 **기본 브랜치**를 Production Branch 로 잡는다. 현재 기본
-브랜치는 `claude/cool-cray-arzjd9` 이므로 그대로 두면 이 브랜치가 배포된다.
-`main` 으로 바꾸려면 PR 을 머지한 뒤 GitHub → Settings → Branches 에서 기본
-브랜치를 `main` 으로 바꾸고, Vercel → Settings → Git → Production Branch 도
-같이 바꾼다. **두 곳을 같이 바꿔야 한다** — 한쪽만 바꾸면 배포가 멈춘 브랜치를
-계속 바라본다.
+배포 기준은 `main` 이다 (PR #1 머지, 2026-10-12).
+
+Vercel 은 Import 시점의 저장소 **기본 브랜치**를 Production Branch 로 잡는다.
+GitHub 기본 브랜치가 아직 `claude/cool-cray-arzjd9` 로 남아 있으면 Import 전에
+GitHub → Settings → General → Default branch 를 `main` 으로 바꾼다. 이미 Import
+했다면 Vercel → Settings → Git → Production Branch 를 `main` 으로 바꾼다.
+**두 곳이 같은 브랜치를 가리켜야 한다** — 어긋나면 배포가 멈춘 브랜치를 계속
+바라본다.
 
 ## 2. `DEMO_SEED` 가 하는 일
 
@@ -105,3 +107,45 @@ Firestore 를 켰다면 보안 규칙 배포를 빠뜨리지 않는다 — 콘�
 npm run deploy:rules
 npm run check:firebase   # 배포본과 로컬 파일을 대조한다
 ```
+
+## 5. Firebase 프로젝트 연결 (`estate-83713`)
+
+호스팅은 Vercel, 로그인·저장은 Firebase(Spark 무료)로 쓴다. 코드 변경 없이
+아래 콘솔 작업과 Vercel 환경변수만으로 전환된다. `.firebaserc` 의 기본 프로젝트가
+`estate-83713` 이라 `npm run deploy:rules` 도 이 프로젝트를 대상으로 한다.
+
+### 5.1 Firebase 콘솔
+
+1. **Authentication** → 시작하기 → 로그인 방법 → **Google** 사용 설정 → 저장
+2. **Firestore Database** → 데이터베이스 만들기 → 위치 `asia-northeast3`(서울)
+   → **프로덕션 모드**로 시작. 테스트 모드로 만들면 전면 개방이다
+3. **프로젝트 설정 → 일반 → 내 앱** → 웹(`</>`) 앱 추가. Firebase Hosting 은
+   체크하지 않는다. 표시되는 `firebaseConfig` 6개 값을 아래 표의 `NEXT_PUBLIC_*` 에 쓴다
+4. **프로젝트 설정 → 서비스 계정** → 새 비공개 키 생성 → JSON 다운로드.
+   이 파일은 비밀이다 — 저장소·채팅에 올리지 않고 Vercel 환경변수에만 넣는다
+
+복합 인덱스는 필요 없다. 저장소 계층이 `where`·`orderBy` 쿼리를 쓰지 않는다.
+
+### 5.2 Vercel 환경변수
+
+| 변수 | 값 |
+|---|---|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | `firebaseConfig.apiKey` |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `firebaseConfig.authDomain` |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `estate-83713` |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `firebaseConfig.storageBucket` |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `firebaseConfig.messagingSenderId` |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | `firebaseConfig.appId` |
+| `FIREBASE_ADMIN_PROJECT_ID` | `estate-83713` |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | JSON 의 `client_email` |
+| `FIREBASE_ADMIN_PRIVATE_KEY` | JSON 의 `private_key` 값 그대로 (`\n` 포함, 따옴표 제외) |
+
+`DEMO_SEED` 는 넣지 않는다 — Admin 이 설정되면 어차피 타지 않는 경로다.
+`NEXT_PUBLIC_*` 는 빌드 시점에 번들에 박히므로, 배포 후에 넣었다면 Redeploy 한다.
+
+### 5.3 배포 후
+
+Authentication → 설정 → **승인된 도메인**에 Vercel 이 준 주소
+(`<프로젝트>.vercel.app`)를 추가한다. 빠뜨리면 구글 로그인 팝업이
+`auth/unauthorized-domain` 으로 실패한다. Preview 배포는 주소가 매번 달라
+로그인이 되지 않는 것이 정상이다.
