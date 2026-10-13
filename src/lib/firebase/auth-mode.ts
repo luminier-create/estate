@@ -108,15 +108,37 @@ const TOKEN_ERRORS = new Set([
   'auth/session-cookie-revoked',
 ])
 
-export function classifyAdminError(e: unknown): 'token' | 'config' {
-  const code = typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : undefined
-  return typeof code === 'string' && TOKEN_ERRORS.has(code) ? 'token' : 'config'
+/**
+ * firebase-admin 은 구글 공개키 조회 실패(네트워크·응답 오류)도 'auth/argument-error' 로
+ * 바꿔 던진다 (token-verifier.js 의 mapJwtErrorToAuthError). 이것을 토큰 문제로 보면
+ * egress·DNS 장애 때 모든 사용자가 조용히 로그아웃되는데 로그에는 잘못된 토큰처럼 남는다.
+ * 라이브러리 메시지 앞부분으로 가른다 — 이 메시지에는 토큰 값이 들어 있지 않다.
+ */
+const KEY_FETCH_MESSAGES = ['Error while making request', 'Error fetching public keys']
+
+function messageOf(e: unknown): string {
+  const m = typeof e === 'object' && e !== null ? (e as { message?: unknown }).message : undefined
+  return typeof m === 'string' ? m : ''
 }
 
-/** 로그에 남길 오류 식별자. 쿠키·토큰 값은 담기지 않는다 */
+export function classifyAdminError(e: unknown): 'token' | 'config' {
+  const code = typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : undefined
+  if (typeof code !== 'string' || !TOKEN_ERRORS.has(code)) return 'config'
+  if (code === 'auth/argument-error') {
+    const message = messageOf(e)
+    if (KEY_FETCH_MESSAGES.some((p) => message.startsWith(p))) return 'config'
+  }
+  return 'token'
+}
+
+/**
+ * 로그에 남길 오류 식별자. 쿠키·토큰 값은 담기지 않는다.
+ * 'auth/argument-error' 는 원인이 여럿(형식 오류·서명·공개키 조회 실패)이라 메시지 앞부분을 붙인다.
+ */
 export function adminErrorLabel(e: unknown): string {
   if (typeof e === 'object' && e !== null) {
     const code = (e as { code?: unknown }).code
+    if (code === 'auth/argument-error') return `${code}: ${messageOf(e).slice(0, 80)}`
     if (typeof code === 'string') return code
     const message = (e as { message?: unknown }).message
     if (typeof message === 'string') return message.slice(0, 200)

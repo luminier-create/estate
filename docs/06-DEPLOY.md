@@ -45,7 +45,7 @@ GitHub → Settings → General → Default branch 를 `main` 으로 바꾼다. 
 (`src/lib/demo-seed.ts`). 단지명에 `(예시)` 를 붙여 실제 매물로 읽히지 않게 한다.
 
 기본값은 **꺼짐**이다. 로컬 개발과 E2E 의 초기 상태를 바꾸지 않기 위해서다.
-Firebase Admin 이 설정되면 저장소가 Firestore 로 바뀌므로 이 경로 자체를 타지
+firebase 모드(`auth-mode.ts` 판정)면 저장소가 Firestore 로 바뀌므로 이 경로 자체를 타지
 않는다 — 켜 둔 채로 실데이터 환경에 가도 부작용이 없다.
 
 ### 켜면 온보딩 화면을 지나간다
@@ -63,7 +63,7 @@ Firebase Admin 이 설정되면 저장소가 Firestore 로 바뀌므로 이 경�
 
 ## 3. 알고 배포하는 제약 — 인메모리 저장소
 
-Firebase Admin 이 없으면 저장소가 **서버 프로세스 메모리**다
+데모 모드(Firebase 신호가 하나도 없을 때)에서는 저장소가 **서버 프로세스 메모리**다
 (`src/lib/repo/store.ts`). 서버리스에서는 인스턴스마다 메모리가 따로이고
 인스턴스는 수시로 새로 뜬다. 결과:
 
@@ -93,9 +93,12 @@ Vercel → Settings → Environment Variables 에 추가한다. 넣는 만큼만
 
 `FIREBASE_ADMIN_PRIVATE_KEY` 는 개행을 `\n` 으로 이스케이프한 한 줄로 넣는다.
 
-1단계를 넣는 순간 데모 로그인이 **차단된다** (`/api/auth/session` 이
-`isAdminConfigured` 일 때 데모 경로를 거부한다). 즉 1단계와 2단계는 같이 넣어야
-로그인할 수 있다.
+1단계를 넣는 순간 데모 로그인이 **차단된다** (`/api/auth/session` 이 firebase 모드 —
+`src/lib/firebase/auth-mode.ts` 의 `resolveAuthMode` — 일 때 데모 경로를 400 으로
+거부한다). `HOMEFIT_AUTH_MODE` 가 없으면 `FIREBASE_ADMIN_*` 중 하나만 있어도 firebase 로
+닫히고, 일부만 있으면 자격증명이 없어 로그인이 503 으로 실패한다. 또 firebase 모드에서
+`NEXT_PUBLIC_FIREBASE_*` 가 비어 있으면 빌드와 개발 서버가 시작을 거부한다. 즉 1단계(3개
+모두)와 2단계는 같이 넣어야 로그인할 수 있다.
 
 Firestore 를 켰다면 보안 규칙 배포를 빠뜨리지 않는다 — 콘솔에서 만든 Firestore 는
 기본이 테스트 모드(전면 개방)다.
@@ -141,7 +144,7 @@ npm run check:firebase   # 배포본과 로컬 파일을 대조한다
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | JSON 의 `client_email` |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | JSON 의 `private_key` 값 그대로 (`\n` 포함, 따옴표 제외) |
 
-`DEMO_SEED` 는 넣지 않는다 — Admin 이 설정되면 어차피 타지 않는 경로다.
+`DEMO_SEED` 는 넣지 않는다 — firebase 모드에서는 어차피 타지 않는 경로다.
 `NEXT_PUBLIC_*` 는 빌드 시점에 번들에 박히므로, 배포 후에 넣었다면 Redeploy 한다.
 
 ### 5.3 배포 후
@@ -160,7 +163,7 @@ Authentication → 설정 → **승인된 도메인**에 Vercel 이 준 주소
 
 | 항목 | 방식 |
 |---|---|
-| 웹 설정(`NEXT_PUBLIC_FIREBASE_*`) | 백엔드에 웹 앱을 연결하면 빌드 때 `FIREBASE_WEBAPP_CONFIG` 가 들어오고 `next.config.ts` 가 옮겨 담는다. 연결이 빠지면 **빌드가 일부러 실패한다** |
+| 웹 설정(`NEXT_PUBLIC_FIREBASE_*`) | 백엔드에 웹 앱을 연결하면 빌드 때 `FIREBASE_WEBAPP_CONFIG` 가 들어오고 `next.config.ts` 가 옮겨 담는다. firebase 모드(`auth-mode.ts` 판정)에서 이 값이 비면 **빌드가 일부러 실패한다** |
 | 서버 자격증명 | 서비스 계정 키 없이 런타임 서비스 계정(ADC). `FIREBASE_ADMIN_*` 를 넣지 않는다 |
 | 인증 모드 | `apphosting.yaml` 의 `HOMEFIT_AUTH_MODE=firebase`. 지워져도 Cloud Run 위에서는 firebase 로 닫힌다 |
 | 배포 | `main` 에 push 할 때마다 자동 롤아웃 |
@@ -196,7 +199,9 @@ Authentication → 설정 → **승인된 도메인**에 Vercel 이 준 주소
 
 랜딩에 **"Google 계정으로 계속하기"** 만 보여야 한다. "데모 모드로 둘러보기" 가 보이면
 인증 모드가 적용되지 않은 것이다. 로그인 → 온보딩 → 단지 등록 → 새로고침 후 남아 있는지,
-Firestore 데이터 탭에 `users` 가 생겼는지 본다.
+Firestore 데이터 탭에 `users` 가 생겼는지 본다. Firestore → 규칙 탭의 게시본이
+`firestore.rules` 와 같은지(테스트 모드가 아닌지)도 본다 — 키 없이 운영하면
+`check:firebase` 의 규칙 대조가 돌지 않는다.
 
 | 증상 | 원인 | 조치 |
 |---|---|---|

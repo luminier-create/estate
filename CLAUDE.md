@@ -19,7 +19,7 @@
 | `npm test` | 단위 테스트 (스코어링·캐시) |
 | `npm run test:e2e` | E2E + 접근성 감사 |
 | `npm run build` | 프로덕션 빌드 |
-| `npm run check:firebase` | Firebase 설정 점검 (배포된 규칙 대조 포함) |
+| `npm run check:firebase` | Firebase 설정 점검 (서비스 계정 키가 있으면 배포된 규칙 대조 포함) |
 | `npm run deploy:rules` | Firestore 보안 규칙·인덱스 배포 |
 | `npm run probe:rone` | R-ONE 응답 스키마 확인 (네트워크 열린 환경에서) |
 | `npm run probe:molit` | 국토부 실거래가 키·응답 필드 점검 (네트워크 열린 환경에서) |
@@ -30,7 +30,7 @@
 src/lib/scoring/    외부 의존 0인 순수 함수. 점수 로직은 전부 여기.
 src/lib/providers/  외부 API 어댑터. real/mock 을 환경변수로 전환.
 src/lib/cache*      응답 캐시와 일일 쿼터 가드.
-src/lib/repo/       Firestore 접근. Admin 미설정 시 인메모리로 폴백.
+src/lib/repo/       Firestore 접근. 데모 모드(auth-mode 판정)에서는 인메모리로 폴백.
 src/app/(app)/      인증이 필요한 화면.
 ```
 
@@ -66,8 +66,9 @@ Firestore 규칙이 클라이언트 쓰기를 전면 차단한다. 브라우저�
 그 순간 서버 액션의 입력 검증이 우회 가능한 경계 밖으로 나간다.
 
 **규칙을 고쳤으면 `npm run deploy:rules` 로 배포한다.** 파일만 고치고 배포하지
-않으면 아무것도 바뀌지 않는다. `npm run check:firebase` 가 배포본을 받아 로컬
-파일과 대조하므로, 배포를 잊으면 거기서 걸린다.
+않으면 아무것도 바뀌지 않는다. 서비스 계정 키가 있으면 `npm run check:firebase` 가
+배포본을 받아 로컬 파일과 대조한다. 키 없이 운영하는 App Hosting 기본 경로에서는
+이 대조가 돌지 않으므로 콘솔 Firestore → 규칙 탭의 게시본을 직접 확인한다.
 
 ### 5. 화면과 점수의 기준을 일치시킨다
 
@@ -128,15 +129,16 @@ pkill -f "nex[t]-server"; pkill -f "nex[t] dev"; rm -rf .next test-results
 
 ### 서버리스에 올리면 인메모리 저장소가 인스턴스마다 갈라진다
 
-Firebase Admin 미설정 시 저장소는 프로세스 메모리다. 단일 서버에서는 문제가
+데모 모드(`HOMEFIT_AUTH_MODE`·`FIREBASE_ADMIN_*`·`K_SERVICE` 신호가 모두 없을 때)에서
+저장소는 프로세스 메모리다. 단일 서버에서는 문제가
 없지만 Vercel 같은 서버리스에서는 인스턴스마다 메모리가 따로라 **방문자가 등록한
 단지가 다음 요청에서 사라진다.** 시연용 배포는 `DEMO_SEED=1` 로 후보 3건을
 매 인스턴스에서 동일하게 재생성해 읽기만 안전하게 만든다 (`src/lib/demo-seed.ts`).
-쓰기까지 남기려면 Firebase Admin 설정이 유일한 해법이다 — `docs/06-DEPLOY.md`.
+쓰기까지 남기려면 firebase 모드(키 또는 App Hosting ADC)가 유일한 해법이다 — `docs/06-DEPLOY.md`.
 
 ### 데모 저장소는 서버 프로세스 메모리에 남는다
 
-Firebase Admin 미설정 시 인메모리 폴백이라, 같은 서버에 테스트를 반복하면 이전
+데모 모드에서는 인메모리 폴백이라, 같은 서버에 테스트를 반복하면 이전
 상태가 남는다. E2E 는 이 상태에 무관하게 통과해야 한다(멱등).
 **깨끗한 서버에서만 드러나는 결함이 있으므로 cold start 로도 확인한다:**
 

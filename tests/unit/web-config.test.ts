@@ -66,6 +66,17 @@ describe('webConfigBuildError', () => {
     expect(msg).toContain('NEXT_PUBLIC_FIREBASE_API_KEY')
   })
 
+  it('런타임과 같은 판정을 쓴다 — 선언이 없어도 firebase 모드면 검사한다', () => {
+    for (const env of [
+      { HOMEFIT_AUTH_MODE: 'Firebase' },
+      { FIREBASE_ADMIN_PROJECT_ID: 'x' },
+      { FIREBASE_CONFIG: '{"projectId":"x"}' },
+      { K_SERVICE: 'homefit' },
+    ]) {
+      expect(webConfigBuildError(env)).toContain('Firebase 웹 설정이 없습니다')
+    }
+  })
+
   it('JSON 을 못 읽은 경우를 알려준다', () => {
     expect(
       webConfigBuildError({ HOMEFIT_AUTH_MODE: 'firebase', FIREBASE_WEBAPP_CONFIG: '{oops' }),

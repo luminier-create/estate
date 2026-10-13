@@ -85,7 +85,7 @@ Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" �
 키 발급 절차는 [03-DATA-SOURCES](docs/03-DATA-SOURCES.md) §8 체크리스트를 따른다.
 
 > 데모 모드의 데이터는 서버 프로세스 메모리에만 저장되며 재시작 시 사라진다.
-> Firebase Admin 환경변수가 설정되면 이 경로는 자동으로 닫히고 Firestore를 쓴다.
+> firebase 모드(Firebase Admin 환경변수가 있거나 App Hosting 일 때)면 이 경로는 자동으로 닫히고 Firestore를 쓴다.
 
 ## 명령어
 

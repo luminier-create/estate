@@ -162,7 +162,9 @@ estate/
 |---|---|---|
 | App Hosting (`HOMEFIT_AUTH_MODE=firebase`, `K_SERVICE`) | firebase | ADC (런타임 서비스 계정) |
 | 로컬·Vercel 에 `FIREBASE_ADMIN_*` 3개 | firebase | cert |
-| 키가 일부만 있음 | firebase | 없음 → 로그인 503 |
+| `FIREBASE_ADMIN_PROJECT_ID` 만 있음 | firebase | ADC (해당 프로젝트 지정) |
+| `CLIENT_EMAIL`·`PRIVATE_KEY` 중 일부만 있음 | firebase | 없음 → 로그인 503 |
+| `HOMEFIT_AUTH_MODE` 가 알 수 없는 값, 또는 Cloud Run 위의 `demo` | firebase (+로그) | 위 규칙대로 |
 | 아무 신호 없음 (로컬·E2E·Vercel 데모) | demo | — |
 
 애매하면 firebase 로 닫는다. ADC 는 첫 호출 전에는 실패를 알 수 없으므로 자격증명

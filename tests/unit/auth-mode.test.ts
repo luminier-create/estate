@@ -190,3 +190,32 @@ describe('adminErrorLabel', () => {
     expect(adminErrorLabel(null)).toBe('null')
   })
 })
+
+describe('classifyAdminError — 공개키 조회 실패', () => {
+  it('argument-error 라도 네트워크·공개키 응답 실패면 config', () => {
+    expect(
+      classifyAdminError({
+        code: 'auth/argument-error',
+        message: 'Error while making request: connect ECONNREFUSED 142.250.0.1:443',
+      }),
+    ).toBe('config')
+    expect(
+      classifyAdminError({ code: 'auth/argument-error', message: 'Error fetching public keys for Google certs: x' }),
+    ).toBe('config')
+  })
+
+  it('형식·서명 문제의 argument-error 는 그대로 token', () => {
+    expect(
+      classifyAdminError({ code: 'auth/argument-error', message: 'Decoding Firebase ID token failed.' }),
+    ).toBe('token')
+    expect(
+      classifyAdminError({ code: 'auth/argument-error', message: 'Firebase ID token has invalid signature.' }),
+    ).toBe('token')
+  })
+
+  it('argument-error 의 로그 식별자에는 메시지 앞부분이 붙는다', () => {
+    expect(
+      adminErrorLabel({ code: 'auth/argument-error', message: 'Error while making request: x' }),
+    ).toBe('auth/argument-error: Error while making request: x')
+  })
+})
