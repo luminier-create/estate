@@ -2,18 +2,15 @@
 
 ## 지금 상태
 
-| 항목 | 값 |
-|---|---|
-| 대상 | Vercel (무료 Hobby) |
-| 필요한 환경변수 | `DEMO_SEED=1` **하나뿐** |
-| 동작 범위 | 전 화면 + 데모 로그인. 데이터는 시드 데이터 |
-| 영속성 | **없음** (아래 §3) |
+| 대상 | 용도 | 로그인·저장 | 필요한 것 |
+|---|---|---|---|
+| **Firebase App Hosting** (§6) | 실서비스 | 구글 로그인 + Firestore (`estate-83713`) | Blaze(종량제), 콘솔 설정. **키·시크릿 입력 없음** |
+| Vercel Hobby (§1~§5) | 시연 | 데모 로그인 + 인메모리 (§3) | `DEMO_SEED=1` |
 
-`docs/02-ARCHITECTURE.md` 는 Firebase App Hosting 을 전제로 쓰여 있다. 그쪽은
-Blaze(종량제) 전환과 Firestore·Authentication 콘솔 설정이 함께 필요해서, 먼저
-Vercel 로 눈에 보이게 띄우고 Firebase 는 실데이터 단계에서 붙인다. **코드 변경
-없이 양쪽 모두에 올라간다** — 키가 없으면 Mock Provider 로, 있으면 실 Provider 로
-자동 전환되는 구조이기 때문이다.
+**코드 변경 없이 어느 쪽에도 올라간다** — 인증 모드는 환경으로 판정하고
+(`src/lib/firebase/auth-mode.ts`), 외부 API 는 키가 없으면 Mock Provider 로 떨어진다.
+App Hosting 은 `apphosting.yaml` 이 `HOMEFIT_AUTH_MODE=firebase` 를 고정하므로
+공개 주소에서 데모 로그인이 열리지 않는다.
 
 ## 1. Vercel 배포 절차
 
@@ -108,7 +105,11 @@ npm run deploy:rules
 npm run check:firebase   # 배포본과 로컬 파일을 대조한다
 ```
 
-## 5. Firebase 프로젝트 연결 (`estate-83713`)
+## 5. Vercel + Firebase 로 붙이는 경우 (`estate-83713`)
+
+> 실서비스 배포는 §6 App Hosting 으로 정했다(2026-10-13). 이 절은 Vercel 에서
+> 실로그인을 붙여야 할 때를 위해 남긴다. App Hosting 은 아래 서비스 계정 키도,
+> 환경변수 9개도 필요 없다.
 
 호스팅은 Vercel, 로그인·저장은 Firebase(Spark 무료)로 쓴다. 코드 변경 없이
 아래 콘솔 작업과 Vercel 환경변수만으로 전환된다. `.firebaserc` 의 기본 프로젝트가
@@ -149,3 +150,76 @@ Authentication → 설정 → **승인된 도메인**에 Vercel 이 준 주소
 (`<프로젝트>.vercel.app`)를 추가한다. 빠뜨리면 구글 로그인 팝업이
 `auth/unauthorized-domain` 으로 실패한다. Preview 배포는 주소가 매번 달라
 로그인이 되지 않는 것이 정상이다.
+
+## 6. Firebase App Hosting (실서비스)
+
+호스팅·로그인·저장을 모두 Firebase 프로젝트 `estate-83713` 에서 한다.
+조사 근거와 확신도 라벨은 `docs/10-KNOWLEDGE.md` §1.8.
+
+### 6.1 무엇이 자동으로 되는가
+
+| 항목 | 방식 |
+|---|---|
+| 웹 설정(`NEXT_PUBLIC_FIREBASE_*`) | 백엔드에 웹 앱을 연결하면 빌드 때 `FIREBASE_WEBAPP_CONFIG` 가 들어오고 `next.config.ts` 가 옮겨 담는다. 연결이 빠지면 **빌드가 일부러 실패한다** |
+| 서버 자격증명 | 서비스 계정 키 없이 런타임 서비스 계정(ADC). `FIREBASE_ADMIN_*` 를 넣지 않는다 |
+| 인증 모드 | `apphosting.yaml` 의 `HOMEFIT_AUTH_MODE=firebase`. 지워져도 Cloud Run 위에서는 firebase 로 닫힌다 |
+| 배포 | `main` 에 push 할 때마다 자동 롤아웃 |
+
+### 6.2 콘솔 절차 (한 번만)
+
+1. **Blaze 전환** — 콘솔 왼쪽 아래 요금제 → 업그레이드 → Blaze. App Hosting 은 Blaze 필수다.
+2. **예산 알림** — Google Cloud 콘솔 → 결제 → 예산 및 알림 → 프로젝트 `estate-83713`,
+   월 $5, 50·90·100% 알림. 알림은 메일만 보내고 서비스를 멈추지 않는다.
+3. **Firestore** — 데이터베이스 만들기 → ID `(default)`, Standard → 위치는 4번에서 고를
+   App Hosting 지역과 같게(서울이 App Hosting 목록에 없으면 `asia-east1`) →
+   **프로덕션 모드** → 규칙 탭에 저장소의 `firestore.rules` 를 붙여넣고 게시.
+4. **Authentication** → 시작하기 → 로그인 방법 → Google 사용 설정.
+5. **웹 앱** — 프로젝트 설정 → 내 앱 → `</>`. Firebase Hosting 은 체크하지 않는다.
+   값은 옮겨 적지 않는다.
+6. **App Hosting 백엔드** — 빌드 → App Hosting → 백엔드 만들기
+   - 지역: 서울이 있으면 서울, 없으면 `asia-east1`
+   - GitHub 연결: `luminier-create` 에 앱 설치, 저장소는 `estate` 만
+   - 루트 디렉터리 `/`, **라이브 브랜치 `main` 을 직접 고른다**
+     (GitHub 기본 브랜치가 아직 `claude/cool-cray-arzjd9` 면 그쪽이 기본으로 잡힐 수 있다)
+   - 자동 롤아웃 켬, 백엔드 이름 `homefit`
+   - **Firebase 웹 앱 연결: 5번의 웹 앱을 고른다 — 건너뛰지 않는다**
+   - 주소: `https://homefit--estate-83713.<지역>.hosted.app`
+7. **IAM 확인** — Google Cloud 콘솔 → IAM →
+   `firebase-app-hosting-compute@estate-83713.iam.gserviceaccount.com` 행에
+   "Firebase Admin SDK 관리자 서비스 에이전트" 가 있는지 본다. 없으면
+   "Firebase Authentication 관리자"(`roles/firebaseauth.admin`)와
+   "Cloud Datastore 사용자"(`roles/datastore.user`)를 추가한다. 다른 역할은 지우지 않는다.
+8. **승인된 도메인** — Authentication → 설정 → 승인된 도메인에 6번 주소의 호스트명을
+   정확히 추가한다. `hosted.app` 같은 상위 도메인만 넣지 않는다.
+
+### 6.3 배포 후 확인
+
+랜딩에 **"Google 계정으로 계속하기"** 만 보여야 한다. "데모 모드로 둘러보기" 가 보이면
+인증 모드가 적용되지 않은 것이다. 로그인 → 온보딩 → 단지 등록 → 새로고침 후 남아 있는지,
+Firestore 데이터 탭에 `users` 가 생겼는지 본다.
+
+| 증상 | 원인 | 조치 |
+|---|---|---|
+| 빌드 실패 `misconfigured-secret` | yaml 이 없는 비밀을 참조 | 비밀을 만들고 권한을 준 뒤에만 주석을 푼다 |
+| 빌드 실패 "Firebase 웹 설정이 없습니다" | 백엔드에 웹 앱 미연결 | 6.2-6 |
+| 처음 몇 분 SSL 오류 | 인증서 준비 중 | 기다린다 |
+| 로그인 팝업 `auth/unauthorized-domain` | 승인된 도메인 누락 | 6.2-8 |
+| "로그인 서버 설정에 문제가 있습니다" (503) | IAM 권한·프로젝트 설정 | 6.2-7. 런타임 로그의 `[auth/session] config` 줄을 본다 |
+| 단지 저장 실패, 로그에 "Invalid Server Actions request" | 앞단이 공개 호스트를 넘기지 않음 [미확인] | `next.config.ts` 에 `experimental.serverActions.allowedOrigins` 로 정확한 호스트를 넣는다 |
+
+### 6.4 커스텀 도메인 (Cloudflare DNS)
+
+1. App Hosting → `homefit` → 설정 → 도메인 → 커스텀 도메인 추가.
+2. 마법사가 보여 주는 레코드(A, TXT `fah-claim=…`, `_acme-challenge` CNAME)를
+   Cloudflare DNS 에 **값 그대로** 넣는다. 같은 이름의 기존 A·AAAA·CNAME 은 지운다.
+3. **A 레코드와 `_acme-challenge` CNAME 은 프록시를 끈다(회색 구름, DNS only).**
+   주황 구름이면 인증서 발급이 실패한다. 이 레코드들은 영구히 유지한다.
+4. 상태가 활성이 되면 커스텀 도메인 호스트명도 승인된 도메인에 추가한다.
+
+### 6.5 비용과 외부 API 키
+
+- 하루 수십 명 규모면 월 $0~2 로 추정한다 [미확인: 단가는 확인, 사용량은 가정].
+  첫 청구서에서 Artifact Registry(빌드 이미지 누적) 항목을 본다.
+- 외부 API 키는 `npx -y firebase-tools apphosting:secrets:set <이름>` →
+  `apphosting:secrets:grantaccess <이름> --backend homefit` → `apphosting.yaml` 주석 해제
+  순서로 붙인다. 순서를 바꾸면 빌드가 실패한다.

@@ -1,6 +1,15 @@
-# Firebase App Hosting 설정
-# 비밀값은 Cloud Secret Manager 에 저장하고 여기서는 참조만 한다.
-#   firebase apphosting:secrets:set KAKAO_REST_API_KEY
+# Firebase App Hosting 설정 — 프로젝트 estate-83713, 백엔드 homefit
+# 배포 절차: docs/06-DEPLOY.md §6
+#
+# 1) 여기 적은 secret 은 빌드 준비 단계에서 "전부" 조회된다. 하나라도 Secret Manager 에
+#    없거나 백엔드에 접근 권한이 없으면 빌드가 첫 단계에서 실패한다 (RUNTIME 전용도
+#    마찬가지). 그래서 실제로 만들고 권한까지 준 비밀만 주석을 푼다.
+# 2) Firebase 웹 설정(NEXT_PUBLIC_FIREBASE_*)은 여기 없다. 백엔드에 웹 앱을 연결하면
+#    App Hosting 이 빌드 때 FIREBASE_WEBAPP_CONFIG 를 넣고, next.config.ts 가 옮겨 담는다.
+# 3) Firebase Admin 은 서비스 계정 키 없이 런타임 서비스 계정(ADC)으로 붙는다.
+#    FIREBASE_ADMIN_* 를 여기에 넣지 않는다.
+# 4) DEMO_SEED 는 넣지 않는다. 빈 value("") 는 yaml 을 무효로 만든다.
+
 runConfig:
   minInstances: 0
   maxInstances: 3
@@ -9,45 +18,29 @@ runConfig:
   memoryMiB: 512
 
 env:
-  # 클라이언트 번들에 포함되는 공개 값
-  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    secret: NEXT_PUBLIC_FIREBASE_API_KEY
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    secret: NEXT_PUBLIC_FIREBASE_APP_ID
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_KAKAO_JS_KEY
-    secret: NEXT_PUBLIC_KAKAO_JS_KEY
+  # 인증 모드를 명시한다. 공개 주소에서 데모 로그인이 열리지 않게 하는 주 신호다.
+  # 빌드(next.config 의 웹 설정 가드)와 런타임(src/lib/firebase/auth-mode.ts) 양쪽에서 읽는다.
+  - variable: HOMEFIT_AUTH_MODE
+    value: firebase
     availability: [BUILD, RUNTIME]
 
-  # 서버 전용 — RUNTIME 에서만 노출한다
-  - variable: FIREBASE_ADMIN_PROJECT_ID
-    secret: FIREBASE_ADMIN_PROJECT_ID
-    availability: [RUNTIME]
-  - variable: FIREBASE_ADMIN_CLIENT_EMAIL
-    secret: FIREBASE_ADMIN_CLIENT_EMAIL
-    availability: [RUNTIME]
-  - variable: FIREBASE_ADMIN_PRIVATE_KEY
-    secret: FIREBASE_ADMIN_PRIVATE_KEY
-    availability: [RUNTIME]
-  - variable: KAKAO_REST_API_KEY
-    secret: KAKAO_REST_API_KEY
-    availability: [RUNTIME]
-  - variable: MOLIT_SERVICE_KEY
-    secret: MOLIT_SERVICE_KEY
-    availability: [RUNTIME]
-  - variable: ODSAY_API_KEY
-    secret: ODSAY_API_KEY
-    availability: [RUNTIME]
+  # ── 외부 API 키: 발급 → 비밀 생성 → 백엔드 접근 권한 부여를 마친 것만 주석을 푼다 ──
+  #   npx -y firebase-tools apphosting:secrets:set KAKAO_REST_API_KEY --project estate-83713
+  #   npx -y firebase-tools apphosting:secrets:grantaccess KAKAO_REST_API_KEY --backend homefit --project estate-83713
+  # 키가 없으면 해당 Provider 는 Mock 으로 동작한다.
+  #
+  # - variable: KAKAO_REST_API_KEY
+  #   secret: KAKAO_REST_API_KEY
+  #   availability: [RUNTIME]
+  # - variable: MOLIT_SERVICE_KEY
+  #   secret: MOLIT_SERVICE_KEY
+  #   availability: [RUNTIME]
+  # - variable: ODSAY_API_KEY
+  #   secret: ODSAY_API_KEY
+  #   availability: [RUNTIME]
+  #
+  # 카카오 지도 JS 키는 번들에 공개되는 값이라 비밀이 아니다. 발급 후 value 로 넣는다.
+  # (카카오 개발자 콘솔에서 사이트 도메인 제한을 반드시 건다)
+  # - variable: NEXT_PUBLIC_KAKAO_JS_KEY
+  #   value: <카카오 JavaScript 키>
+  #   availability: [BUILD]

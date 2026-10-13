@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { SignInButton } from '@/components/auth/SignInButton'
 import { Card } from '@/components/ui'
 import { getSessionUser } from '@/lib/firebase/session'
-import { isAdminConfigured } from '@/lib/firebase/admin'
+import { isFirebaseMode } from '@/lib/firebase/admin'
 
 const AXES = [
   { label: '사무실 통근', weight: 20, note: '30분 이내 최고 · 90분 이상 최저' },
@@ -86,7 +86,7 @@ export default async function LandingPage() {
                 있습니다.
               </p>
             </div>
-            <SignInButton configured={isAdminConfigured} />
+            <SignInButton configured={isFirebaseMode()} />
             <ol className="space-y-2 text-sm text-[var(--color-muted)]">
               <li>1. 내 조건 등록 (예산·사무실·생활반경)</li>
               <li>2. 관심 아파트 입력 (단지명·면적·금액)</li>

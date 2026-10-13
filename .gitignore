@@ -16,3 +16,6 @@ firebase-debug.log
 test-results/
 playwright-report/
 .probe/
+# Firebase App Hosting 어댑터를 로컬에서 돌리면 남는 산출물
+/.apphosting/
+next.config.original.*

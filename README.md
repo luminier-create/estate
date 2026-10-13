@@ -95,7 +95,7 @@ Firebase 설정이 없으면 랜딩 화면에 "데모 모드로 둘러보기" �
 | `npm run build` | 프로덕션 빌드 |
 | `npm run typecheck` | TypeScript strict 검사 |
 | `npm run lint` | ESLint |
-| `npm test` | 단위 테스트 (스코어링·캐시·Provider 파싱, 168건) |
+| `npm test` | 단위 테스트 (스코어링·캐시·Provider 파싱·인증 규칙, 216건) |
 | `npm run test:e2e` | Playwright E2E (전 흐름 + 접근성 감사) |
 | `npm run check:firebase` | Firebase 설정 점검 (값 검증 + 실제 연결 테스트) |
 | `npm run deploy:rules` | Firestore 보안 규칙·인덱스 배포 |
@@ -119,27 +119,21 @@ E2E는 데모 모드로 돌아가므로 API 키가 필요 없다. 브라우저�
 
 ## 배포
 
-시연용으로는 **Vercel 에 환경변수 `DEMO_SEED=1` 하나만 넣고 올리면 된다** —
-키가 없으면 Mock Provider 로 떨어지므로 시크릿 없이도 전 화면이 동작한다.
-절차와 제약(인메모리 저장소라 쓰기가 남지 않는다)은 `docs/06-DEPLOY.md`.
+실서비스는 **Firebase App Hosting** 이다 (`docs/06-DEPLOY.md` §6). 서비스 계정 키나
+환경변수를 손으로 넣지 않는다.
 
-아래는 실데이터·영속 저장을 붙인 Firebase App Hosting 기준이다.
+- 웹 설정은 백엔드에 연결한 웹 앱에서 빌드 때 자동으로 들어온다(`next.config.ts`)
+- 서버는 런타임 서비스 계정(ADC)으로 Firestore·Auth 에 붙는다
+- `apphosting.yaml` 이 `HOMEFIT_AUTH_MODE=firebase` 를 고정해 데모 로그인을 닫는다
+- `main` 에 push 하면 자동 롤아웃된다
 
-### Firebase App Hosting
+**규칙 배포는 선택이 아니다.** Firestore 를 테스트 모드로 만들면 전면 개방이라,
+로그인한 사용자가 브라우저 SDK 로 자기 문서를 마음대로 쓸 수 있고 서버 액션의 입력
+검증이 통째로 우회된다. 프로덕션 모드로 만들고 `firestore.rules` 를 게시한다.
+`npm run check:firebase` 가 배포본을 받아 대조한다(서비스 계정 키가 있을 때).
 
-```bash
-firebase init apphosting          # 저장소 연결
-firebase apphosting:secrets:set KAKAO_REST_API_KEY   # 키마다 반복
-npm run deploy:rules              # 보안 규칙·인덱스
-```
-
-**규칙 배포는 선택이 아니다.** 콘솔에서 Firestore 를 만들면 기본이 테스트 모드
-(전면 개방)라, 배포하지 않으면 로그인한 사용자가 브라우저 SDK 로 자기 문서를
-마음대로 쓸 수 있고 서버 액션의 입력 검증이 통째로 우회된다.
-`npm run check:firebase` 가 배포본을 받아 `firestore.rules` 와 대조한다.
-
-`apphosting.yaml` 이 시크릿 참조와 런타임 설정을 담고 있다. 서버 전용 키는
-`availability: [RUNTIME]` 로 지정해 빌드 산출물에 포함되지 않게 했다.
+시연용으로는 Vercel 에 `DEMO_SEED=1` 하나만 넣고 올려도 된다 — 키가 없으면 데모
+로그인과 Mock Provider 로 전 화면이 동작한다(인메모리라 쓰기가 남지 않는다).
 
 ## 성능
 

@@ -279,7 +279,7 @@ transitCount = 거리 10km 미만 ? 0~1 : 1~2    // 거리 해시로 결정적 �
 | 3 | Authentication → Settings → 승인된 도메인에 `localhost` 확인 | — |
 | 4 | Firestore Database → 데이터베이스 만들기 → **프로덕션 모드** → `asia-northeast3`(서울) | — |
 | 5 | 프로젝트 설정 → 내 앱 → 웹 앱 추가(`</>`) → SDK 설정 및 구성 | `NEXT_PUBLIC_FIREBASE_*` 6개 |
-| 6 | 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON) | `FIREBASE_ADMIN_*` 3개 |
+| 6 | 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON) — **로컬·Vercel 만**. App Hosting 은 키 없이 ADC 로 붙는다(`06-DEPLOY.md` §6) | `FIREBASE_ADMIN_*` 3개 |
 
 서비스 계정 JSON 에서 옮겨 담을 값:
 
@@ -298,7 +298,8 @@ npm run check:firebase
 값 누락, `private_key` 형식 오류, 웹/Admin 프로젝트 ID 불일치를 잡아내고,
 Admin SDK 초기화 → Firestore 쓰기·읽기·삭제 → Authentication 접근까지 실제로 시험한다.
 
-> 리전은 한 번 정하면 바꿀 수 없다. 국내 서비스이므로 `asia-northeast3` 를 쓴다.
+> 리전은 한 번 정하면 바꿀 수 없다. App Hosting 백엔드와 같은 지역으로 맞춘다 —
+> App Hosting 지역 목록에 서울(`asia-northeast3`)이 있으면 서울, 없으면 `asia-east1`.
 > Firestore 를 만들지 않은 채로 두면 연결 테스트가 `NOT_FOUND` 로 실패한다.
 
 ### 8.2 나머지 API (선택 — 미설정 시 시드 데이터로 동작)

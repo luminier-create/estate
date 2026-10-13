@@ -199,6 +199,33 @@ NaN 은 막지만 `Infinity` 는 통과한다. 좌표·비율처럼 계산에 �
 `.finite()` 와 범위(`.min()/.max()`)를 반드시 붙인다. Infinity 좌표 하나가
 거리 계산을 NaN 으로 만들고, 그것이 점수 산출 전체로 번진다.
 
+### 인증 모드는 선언으로 정하고, 추론으로 데모를 열지 않는다
+
+`src/lib/firebase/auth-mode.ts` 의 `resolveAuthMode` 하나가 firebase/demo 를 정하고
+세션·저장소·랜딩이 모두 이것을 따른다 (`getAuthMode()` / `isFirebaseMode()`).
+App Hosting 은 서비스 계정 키 없이 ADC 로 붙는데, ADC 는 첫 API 호출 전에는 실패를
+알 수 없다. 그래서 "자격증명이 되면 firebase" 로 고르지 않고 `HOMEFIT_AUTH_MODE` 와
+Cloud Run 신호(`K_SERVICE`)로 정하며, 애매하면 firebase 로 닫는다. 데모가 공개 주소에서
+열리면 누구나 로그인 없이 들어온다. 모듈 최상위에서 env 를 읽어 상수로 굳히지 않는다.
+
+### `apphosting.yaml` 에 만들지 않은 비밀을 적으면 빌드가 첫 단계에서 실패한다
+
+`secret:` 참조는 availability(RUNTIME 전용 포함)와 상관없이 빌드 준비 단계에서 전부
+조회된다. 비밀 생성 → `apphosting:secrets:grantaccess` → yaml 주석 해제 순서를 지킨다.
+`value: ""` 같은 빈 값도 yaml 을 무효로 만든다.
+
+### Route Handler 에서 출처를 `req.url` 로 비교하지 않는다
+
+App Hosting(standalone)에서 `new URL(req.url).origin` 은 내부 주소(`0.0.0.0:PORT`)라
+정상 요청까지 막힌다. Next 의 Origin 검사는 서버 액션에만 있으므로 쿠키를 심는
+Route Handler 는 `src/lib/http/same-origin.ts` 로 직접 막는다 (login CSRF).
+
+### App Hosting 어댑터 빌드는 사본에서만 재현한다
+
+어댑터는 `next.config.ts` 를 `next.config.original.ts` 로 바꿔 감싸고 `.next` 를 덮는다.
+저장소에서 돌리면 개발 서버가 깨진다. `git ls-files` 로 만든 사본에서
+`npm exec --prefix <dir> apphosting-adapter-nextjs-build` 를 실행한다.
+
 ### 번들에 무거운 라이브러리를 정적 import 하지 않는다
 
 recharts·Firebase SDK 는 지연 로드했다. 새 라이브러리를 넣으면

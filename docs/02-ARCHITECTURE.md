@@ -138,17 +138,35 @@ estate/
 ## 4. 인증 흐름
 
 ```
-1. 클라이언트: signInWithPopup(GoogleAuthProvider)   [모바일은 redirect 폴백]
-2. 클라이언트: user.getIdToken() → POST /api/auth/session
-3. 서버: admin.auth().createSessionCookie(idToken, {expiresIn: 14d})
-4. 서버: Set-Cookie __session (httpOnly, secure, sameSite=lax)
-5. 이후 RSC/서버액션: cookies().get('__session') → verifySessionCookie()
-6. 로그아웃: DELETE /api/auth/session → 쿠키 삭제 + signOut()
+1. 클라이언트: signInWithPopup(GoogleAuthProvider)   [팝업 차단 시 redirect 폴백 — getRedirectResult 처리가 없어 현재 미동작, 후속 과제]
+2. 클라이언트: user.getIdToken() → POST /api/auth/session (application/json, 같은 출처)
+3. 서버: 출처 검사(Sec-Fetch-Site → Origin vs X-Forwarded-Host/Host) — 아니면 403/415
+4. 서버: verifyIdToken → auth_time 이 5분 안일 때만
+         admin.auth().createSessionCookie(idToken, {expiresIn: 14d})
+5. 서버: Set-Cookie __session (httpOnly, secure, sameSite=lax)
+6. 이후 RSC/서버액션: cookies().get('__session') → verifySessionCookie(cookie, true)
+7. 로그아웃: DELETE /api/auth/session (같은 출처) → 쿠키 삭제 + signOut()
 ```
 
 **설계 근거**: 클라이언트 SDK 토큰만 쓰면 RSC에서 사용자를 알 수 없어
 모든 페이지가 클라이언트 컴포넌트가 된다. 세션 쿠키 방식으로 서버 렌더 시점에
 사용자 데이터를 직접 조회한다.
+
+**출처 검사**: Next 의 Origin 검사는 서버 액션에만 있다. 세션 라우트가 이 검사 없이
+`req.json()` 을 쓰면 `<form enctype="text/plain">` 으로 공격자 계정의 세션 쿠키를
+심을 수 있다(login CSRF). 구현: `src/lib/http/same-origin.ts`.
+
+**인증 모드** (`src/lib/firebase/auth-mode.ts`): 세션·저장소·랜딩이 같은 판정을 쓴다.
+
+| 환경 | 모드 | Admin 자격증명 |
+|---|---|---|
+| App Hosting (`HOMEFIT_AUTH_MODE=firebase`, `K_SERVICE`) | firebase | ADC (런타임 서비스 계정) |
+| 로컬·Vercel 에 `FIREBASE_ADMIN_*` 3개 | firebase | cert |
+| 키가 일부만 있음 | firebase | 없음 → 로그인 503 |
+| 아무 신호 없음 (로컬·E2E·Vercel 데모) | demo | — |
+
+애매하면 firebase 로 닫는다. ADC 는 첫 호출 전에는 실패를 알 수 없으므로 자격증명
+성공 여부로 데모를 열지 않는다. 토큰 문제는 401, 설정 문제는 503 + 서버 로그로 가른다.
 
 ---
 
@@ -265,7 +283,7 @@ export const geo: GeoProvider = process.env.KAKAO_REST_API_KEY
 ## 10. 환경 변수
 
 ```bash
-# Firebase 웹 (공개)
+# Firebase 웹 (공개 — App Hosting 은 연결된 웹 앱에서 빌드 때 자동 주입)
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=
@@ -273,7 +291,10 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 
-# Firebase Admin (서버 전용)
+# 인증 모드 (비우면 자동 판정, App Hosting 은 apphosting.yaml 이 firebase 로 고정)
+HOMEFIT_AUTH_MODE=
+
+# Firebase Admin (서버 전용, 로컬·Vercel 만 — App Hosting 은 ADC)
 FIREBASE_ADMIN_PROJECT_ID=
 FIREBASE_ADMIN_CLIENT_EMAIL=
 FIREBASE_ADMIN_PRIVATE_KEY=

@@ -2,11 +2,13 @@ import 'server-only'
 /**
  * 저장소 추상화
  *
- * Firebase Admin 이 설정되어 있으면 Firestore 를, 없으면 인메모리 저장소를 쓴다.
+ * firebase 모드(../firebase/auth-mode.ts 판정)면 Firestore 를, 데모 모드면 인메모리
+ * 저장소를 쓴다. 세션과 같은 판정을 써야 한다 — 기준이 갈리면 실계정으로 로그인했는데
+ * 저장은 메모리로 가서 데이터가 사라진다.
  * 키 없이도 앱 전체를 시연할 수 있게 하기 위한 설계다.
  * 인메모리 저장소는 서버 재시작 시 초기화되므로 데모 용도로만 쓴다.
  */
-import { adminDb, isAdminConfigured } from '../firebase/admin'
+import { adminDb, isFirebaseMode } from '../firebase/admin'
 
 export interface DocStore {
   readonly kind: 'firestore' | 'memory'
@@ -136,10 +138,10 @@ let cached: DocStore | null = null
 
 export function store(): DocStore {
   if (cached) return cached
-  cached = isAdminConfigured ? new FirestoreStore() : new MemoryStore()
+  cached = isFirebaseMode() ? new FirestoreStore() : new MemoryStore()
   return cached
 }
 
 export function isDemoStore(): boolean {
-  return !isAdminConfigured
+  return !isFirebaseMode()
 }

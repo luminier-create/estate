@@ -268,6 +268,38 @@ Add this host to your network egress settings to allow access.
 실응답을 한 번 받아 스키마를 확정한다. 검색 스니펫이나 2차 출처만 보고
 필드명을 코드에 넣지 않는다 (§1.5 가 그렇게 막힌 사례다).
 
+### 1.8 Firebase App Hosting — 실서비스 호스팅 (2026-10-13 결정)
+
+확인일 2026-10-13. firebase.google.com·cloud.google.com 문서는 이 작업 환경에서 막혀,
+공식 GitHub 저장소·npm 패키지 소스·API discovery 문서와 로컬 실행으로 확인했다.
+출처 약어: buildpacks = `GoogleCloudPlatform/buildpacks@364ae8c`,
+tools = `firebase-tools@15.33.0`, adapter = `@apphosting/adapter-nextjs@14.0.22`.
+
+| 사실 | 라벨 | 근거 | 이 앱의 대응 |
+|---|---|---|---|
+| `apphosting.yaml` 의 `secret:` 은 availability 와 무관하게 빌드 준비 단계에서 전부 조회되고, 하나라도 없으면 `fah/misconfigured-secret` 로 멈춘다 | [확인됨] | buildpacks `pkg/firebase/preparer/preparer.go`, `pkg/firebase/secrets/secrets.go` | 만든 비밀만 주석을 푼다 |
+| 백엔드에 웹 앱을 연결하면 빌드 때만 `FIREBASE_WEBAPP_CONFIG`(JSON)가 들어온다 | [확인됨] | buildpacks, tools `src/apphosting/backend.ts` | `next.config.ts` 가 `NEXT_PUBLIC_FIREBASE_*` 로 옮긴다. 없으면 빌드 실패 |
+| firebase-admin 13.10 의 createSessionCookie·verifyIdToken·verifySessionCookie 는 Bearer 토큰 REST 호출이라 ADC 로 동작한다(signBlob 불필요) | [확인됨] | `node_modules/firebase-admin/lib/auth/*` | 서비스 계정 키를 쓰지 않는다 |
+| ADC 는 initializeApp 시점에 실패하지 않고 첫 호출에서 실패한다 | [확인됨] | 소스·로컬 실측 | 인증 모드를 환경 선언(`HOMEFIT_AUTH_MODE`)으로 정한다 |
+| standalone 서버에서 `req.url` 의 origin 은 내부 주소(`0.0.0.0:PORT`)다 | [확인됨] | `next@15.5.25 dist/server/next-server.js` | 출처 검사는 Sec-Fetch-Site → Origin vs X-Forwarded-Host/Host |
+| App Hosting 은 Blaze 필수 | [확인됨] | tools 가 결제 미활성 프로젝트를 거부 | — |
+| Next.js 15.5 는 App Hosting 공식 지원표(15.0~15.2) 밖이다. adapter peer 는 `next: "*"` 이고 로컬 재현 빌드는 성공했다 | [확인됨] | `FirebaseExtended/firebase-framework-tools docs/nextjs/README.md`, 로컬 실행 | 빌드가 깨지면 adapter 버전부터 본다 |
+| adapter 버전은 빌드마다 최신이 설치되고 고정 수단이 없다 | [확인됨] | buildpacks `cmd/nodejs/firebasenextjs` | 의존성으로 추가하지 않는다(어댑터 우회) |
+| 콘솔로 만든 백엔드의 런타임 계정이 Admin SDK 역할을 받는지 | [검증필요] | CLI 는 붙인다(tools 소스) | 06-DEPLOY §6.2-7 에서 눈으로 확인 |
+| App Hosting 지역 목록에 서울이 있는지 | [검증필요] | 목록은 API 가 실시간으로 내려준다 | 없으면 `asia-east1` |
+| `hosted.app`·커스텀 도메인이 Auth 승인된 도메인에 자동 추가되는지 | [검증필요] | — | 수동 추가 |
+| 앞단이 공개 호스트를 `X-Forwarded-Host` 로 넘기는지 | [검증필요] | buildpacks 가 Angular 에 `NG_TRUST_PROXY_HEADERS=X-Forwarded-Host` 를 넣는다(간접) | 서버 액션 저장 실패 시 `allowedOrigins` |
+| 하루 수십 명 규모 월 비용 $0~2 | [추정] | Cloud Run·Firestore·Logging 무료분 단가는 확인, 사용량은 가정 | 예산 알림 $5 |
+
+**검토 후 기각한 대안 — Cloudflare Workers (2026-10-13)**
+
+- firebase-admin 이 Workers 에서 동작하지 않아 인증·저장 계층을 REST 로 다시 써야 했다
+  (OpenNext 빌드가 `Could not resolve "jose"` 로 실패) [확인됨: 로컬 빌드].
+- 무료 플랜 CPU 한도(요청당 10 ms)를 넘는다. 로컬 workerd 실측으로 새 isolate 첫 요청
+  약 410 ms, 이후 약 14 ms [확인됨: 로컬 실측 / Cloudflare 하드웨어 수치는 추정].
+  Workers Paid(월 $5)가 전제였다.
+- 사용자가 재작성 대신 App Hosting 을 택했다. Cloudflare 전환 설계는 채택하지 않아 저장소에 남기지 않았다.
+
 ---
 
 ## 2. 비용 시뮬레이션
@@ -342,3 +374,4 @@ Add this host to your network egress settings to allow access.
 |---|---|---|---|
 | 2026-09-09 | 최초 작성 | 카카오 정책 변경, ODsay 티어, Firebase 요금제, 비용 시뮬레이션 기재 | 웹 조사 |
 | 2026-09-09 | §1.5 신설 | K-apt(공동주택관리정보시스템) Open API 사전조사 — 로드맵 4.4 착수 여부 판단용. `regionAvgFeePerM2` 가 하드코딩 2400에서 `null` 로 바뀐 것을 계기로 조사. **결론: 지금은 구현 불가** — data.go.kr 원문 접근이 이 작업 환경에서 전면 차단돼 스키마·매핑키·쿼터를 확정하지 못함 | 웹 조사(대부분 간접, 원문 미열람) |
+| 2026-10-13 | §1.8 신설 | 실서비스 호스팅을 Firebase App Hosting 으로 결정. 서비스 계정 키 없이 ADC, 웹 설정 자동 주입, 인증 모드 명시. Cloudflare Workers 는 firebase-admin 비호환과 무료 플랜 CPU 한도로 기각 | 패키지 소스·buildpacks 소스·로컬 재현 빌드 |

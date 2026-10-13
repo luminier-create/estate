@@ -2,6 +2,8 @@
  * Firebase 설정 점검 스크립트.
  *
  * .env.local 에 값을 넣은 뒤 `npm run check:firebase` 로 실행한다.
+ * 서비스 계정 키(FIREBASE_ADMIN_*)가 없으면 연결 테스트는 건너뛴다 — App Hosting
+ * 배포본은 키 없이 런타임 서비스 계정(ADC)으로 붙기 때문이다.
  * 어떤 값이 비었는지, Admin SDK 가 실제로 붙는지, Firestore 읽기·쓰기가
  * 되는지까지 확인해 콘솔 설정 실수를 조기에 잡는다.
  *
@@ -97,7 +99,19 @@ async function main() {
   // 2. Admin SDK 값
   console.log('\n2) Admin SDK 설정')
   const missingAdmin = ADMIN_KEYS.filter((k) => !process.env[k])
-  if (missingAdmin.length > 0) {
+  if (missingAdmin.length === ADMIN_KEYS.length) {
+    // App Hosting 은 서비스 계정 키 없이 런타임 서비스 계정(ADC)으로 붙는다.
+    // 키가 하나도 없는 것은 오류가 아니라 "로컬에서는 연결 테스트를 못 한다"는 뜻이다.
+    warn('서비스 계정 키가 없어 연결 테스트를 건너뜁니다.')
+    dim('Firebase App Hosting 배포본은 키 없이 런타임 서비스 계정(ADC)으로 접속합니다.')
+    dim('로컬에서 연결까지 확인하려면 .env.local 에 FIREBASE_ADMIN_* 3개를 넣으십시오.')
+    if (failed > 0) {
+      console.log(`\n${RED}설정값 점검에서 ${failed}건 실패.${RESET}\n`)
+      process.exit(1)
+    }
+    console.log(`\n${GREEN}웹 설정 정상. 연결 테스트는 건너뛰었습니다.${RESET}\n`)
+    process.exit(0)
+  } else if (missingAdmin.length > 0) {
     failed++
     fail(`비어 있는 값 ${missingAdmin.length}개`)
     missingAdmin.forEach((k) => dim(k))
